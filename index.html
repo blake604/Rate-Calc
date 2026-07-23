@@ -516,7 +516,7 @@
         headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify(payload)
       });
-      statusEl.textContent = 'Saved. Record added to the client sheet.';
+      statusEl.textContent = 'sent.';
       statusEl.className = 'status-msg success';
     } catch (err) {
       statusEl.textContent = 'Could not save. Check your connection and try again.';
