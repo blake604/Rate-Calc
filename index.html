@@ -516,7 +516,7 @@
         headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify(payload)
       });
-      statusEl.textContent = 'Saved. Record added to the client sheet.';
+      statusEl.textContent = 'Sent.';
       statusEl.className = 'status-msg success';
       resetForm();
     } catch (err) {
