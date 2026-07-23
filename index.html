@@ -516,14 +516,37 @@
         headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify(payload)
       });
-      statusEl.textContent = 'sent.';
+      statusEl.textContent = 'Saved. Record added to the client sheet.';
       statusEl.className = 'status-msg success';
+      resetForm();
     } catch (err) {
       statusEl.textContent = 'Could not save. Check your connection and try again.';
       statusEl.className = 'status-msg error';
     } finally {
       btn.disabled = false;
     }
+  }
+
+  function resetForm() {
+    document.getElementById('zipInput').value = '';
+    document.getElementById('ageInput').value = '';
+    document.getElementById('famName').value = '';
+    document.getElementById('famPhone').value = '';
+    document.getElementById('famEmail').value = '';
+    document.getElementById('famTime').value = '';
+
+    document.getElementById('familyCheck').checked = false;
+    document.getElementById('familyPanel').classList.remove('open');
+
+    selectedGender = null;
+    selectedSmoker = null;
+    currentRate = null;
+    document.getElementById('btnM').classList.remove('active');
+    document.getElementById('btnF').classList.remove('active');
+    document.getElementById('btnSmokerYes').classList.remove('active');
+    document.getElementById('btnSmokerNo').classList.remove('active');
+
+    compute();
   }
 </script>
 
