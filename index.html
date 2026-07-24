@@ -4,81 +4,106 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Premium Rate Lookup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --navy: #14213d;
-    --navy-deep: #0b1526;
-    --ledger: #f6f3eb;
-    --paper: #fffdf8;
-    --gold: #b78a3d;
-    --ink: #1c1c1c;
-    --ink-soft: #5a5a52;
-    --line: #d9d3c1;
-    --good: #2f5d3a;
-    --err: #a3372c;
+    --navy: #0b4f6c;
+    --navy-deep: #052235;
+    --sea-glow: #0e6e8c;
+    --ledger: #e7f4f4;
+    --paper: #fcffff;
+    --gold: #1f9c95;
+    --gold-bright: #33c2b8;
+    --ink: #0e2b32;
+    --ink-soft: #4d6e73;
+    --line: #cdeaea;
+    --good: #157a68;
+    --err: #b5453a;
   }
 
   * { box-sizing: border-box; }
 
   body {
     margin: 0;
-    background: var(--ledger);
+    background:
+      radial-gradient(ellipse 900px 500px at 50% -10%, #ffffff 0%, transparent 60%),
+      linear-gradient(180deg, #d7eef0 0%, #c3e4e6 45%, #a9d6da 100%);
     color: var(--ink);
-    font-family: 'Georgia', 'Iowan Old Style', serif;
+    font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
     min-height: 100vh;
     display: flex;
     align-items: flex-start;
     justify-content: center;
-    padding: 48px 20px;
+    padding: 56px 20px;
   }
 
   .sheet {
     width: 100%;
     max-width: 560px;
     background: var(--paper);
-    border: 1px solid var(--line);
-    box-shadow: 0 1px 3px rgba(20,33,61,0.08), 0 12px 32px rgba(20,33,61,0.10);
+    border: 1px solid rgba(255,255,255,0.6);
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow:
+      0 1px 2px rgba(5,34,53,0.06),
+      0 8px 24px rgba(5,34,53,0.10),
+      0 30px 60px -20px rgba(5,34,53,0.35);
   }
 
   .letterhead {
+    position: relative;
     background: var(--navy);
-    background-image: linear-gradient(160deg, var(--navy) 0%, var(--navy-deep) 100%);
+    background-image:
+      radial-gradient(600px 220px at 15% -30%, rgba(51,194,184,0.35), transparent 60%),
+      linear-gradient(160deg, var(--sea-glow) 0%, var(--navy) 45%, var(--navy-deep) 100%);
     color: var(--ledger);
-    padding: 28px 32px 24px;
-    border-bottom: 3px solid var(--gold);
+    padding: 34px 32px 30px;
+    overflow: hidden;
+  }
+
+  .letterhead-icon {
+    position: absolute;
+    top: 20px;
+    right: 24px;
+    opacity: 0.5;
   }
 
   .letterhead .eyebrow {
-    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
     font-size: 11px;
-    letter-spacing: 0.18em;
+    font-weight: 600;
+    letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: var(--gold);
-    margin: 0 0 6px;
+    color: var(--gold-bright);
+    margin: 0 0 8px;
   }
 
   .letterhead h1 {
     margin: 0;
-    font-size: 26px;
-    font-weight: 400;
-    letter-spacing: 0.01em;
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 30px;
+    font-weight: 500;
+    letter-spacing: 0.005em;
   }
 
   .letterhead p {
-    font-family: 'Helvetica Neue', Arial, sans-serif;
-    font-size: 12.5px;
-    color: #c9d0dd;
-    margin: 8px 0 0;
+    font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 13px;
+    color: #bfdde2;
+    margin: 10px 0 0;
     line-height: 1.5;
+    max-width: 380px;
   }
 
-  .body { padding: 32px; }
+  .body { padding: 34px 32px 32px; }
 
   .field { margin-bottom: 22px; }
 
   .field label {
     display: block;
-    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
     font-size: 11px;
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -88,19 +113,22 @@
 
   input[type="number"], input[type="text"], input[type="email"], input[type="tel"] {
     width: 100%;
-    padding: 12px 14px;
-    font-family: 'Helvetica Neue', Arial, sans-serif;
+    padding: 13px 15px;
+    font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
     font-size: 16px;
-    border: 1px solid var(--line);
+    border: 1.5px solid var(--line);
     background: var(--ledger);
     color: var(--ink);
-    border-radius: 2px;
+    border-radius: 10px;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
   }
+
+  input:hover { border-color: #a9d9d6; }
 
   input:focus {
     outline: none;
     border-color: var(--gold);
-    box-shadow: 0 0 0 3px rgba(183,138,61,0.18);
+    box-shadow: 0 0 0 4px rgba(31,156,149,0.14);
   }
 
   .row-2 {
@@ -116,17 +144,20 @@
 
   .toggle button {
     flex: 1;
-    padding: 12px 10px;
-    font-family: 'Helvetica Neue', Arial, sans-serif;
+    padding: 13px 10px;
+    font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
     font-size: 13.5px;
+    font-weight: 500;
     letter-spacing: 0.03em;
-    border: 1px solid var(--line);
+    border: 1.5px solid var(--line);
     background: var(--ledger);
     color: var(--ink);
     cursor: pointer;
-    border-radius: 2px;
-    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    border-radius: 10px;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
   }
+
+  .toggle button:hover { border-color: #a9d9d6; }
 
   .toggle button:focus-visible {
     outline: 2px solid var(--gold);
@@ -134,19 +165,10 @@
   }
 
   .toggle button.active {
-    background: var(--navy);
+    background: linear-gradient(160deg, var(--sea-glow), var(--navy));
     border-color: var(--navy);
-    color: var(--ledger);
-  }
-
-  .family-check {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-family: 'Helvetica Neue', Arial, sans-serif;
-    font-size: 14px;
-    cursor: pointer;
-    user-select: none;
+    color: #fff;
+    box-shadow: 0 4px 10px -4px rgba(11,79,108,0.5);
   }
 
   .family-check input {
@@ -170,42 +192,64 @@
   .family-panel-inner {
     border-left: 2px solid var(--gold);
     padding-left: 18px;
+    margin-left: 2px;
+  }
+
+  .family-check {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    user-select: none;
+    padding: 4px 0;
   }
 
   .result {
     margin-top: 8px;
-    border-top: 1px dashed var(--line);
-    padding-top: 24px;
+    background: linear-gradient(160deg, #eefaf9, #e2f4f2);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 22px 22px;
   }
 
   .result-row {
     display: flex;
     justify-content: space-between;
     align-items: baseline;
-    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
   }
 
   .result-row .label {
     font-size: 12px;
+    font-weight: 600;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--ink-soft);
   }
 
   .result-row .amount {
-    font-family: 'Georgia', serif;
-    font-size: 34px;
-    color: var(--good);
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 36px;
+    font-weight: 500;
+    background: linear-gradient(160deg, var(--good), var(--sea-glow));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   }
 
   .result-row .amount.empty {
     color: var(--ink-soft);
     font-size: 18px;
     font-style: italic;
+    -webkit-text-fill-color: var(--ink-soft);
+    background: none;
   }
 
   .result-note {
-    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
     font-size: 11.5px;
     color: var(--ink-soft);
     margin-top: 10px;
@@ -215,24 +259,33 @@
   .submit-btn {
     width: 100%;
     margin-top: 26px;
-    padding: 14px;
-    background: var(--navy);
-    color: var(--ledger);
+    padding: 15px;
+    background: linear-gradient(160deg, var(--sea-glow), var(--navy-deep));
+    color: #fff;
     border: none;
-    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
     font-size: 13.5px;
+    font-weight: 600;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     cursor: pointer;
-    border-radius: 2px;
+    border-radius: 12px;
+    box-shadow: 0 8px 20px -8px rgba(5,34,53,0.5);
+    transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.15s ease;
   }
 
-  .submit-btn:hover { background: var(--navy-deep); }
-  .submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+  .submit-btn:hover {
+    background: linear-gradient(160deg, #12839f, var(--navy-deep));
+    transform: translateY(-1px);
+    box-shadow: 0 10px 24px -8px rgba(5,34,53,0.55);
+  }
+
+  .submit-btn:active { transform: translateY(0); }
+  .submit-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
   .status-msg {
     margin-top: 14px;
-    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
     font-size: 12.5px;
     text-align: center;
   }
@@ -241,32 +294,58 @@
   .status-msg.error { color: var(--err); }
 
   .step-label {
-    font-family: 'Helvetica Neue', Arial, sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
     font-size: 11px;
-    letter-spacing: 0.14em;
+    font-weight: 700;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: var(--gold);
-    margin: 0 0 16px;
-    padding-top: 4px;
-    border-top: 1px solid var(--line);
+    color: var(--navy);
+    margin: 32px 0 18px;
   }
 
-  .step-label.first {
-    border-top: none;
-    padding-top: 0;
+  .step-label.first { margin-top: 0; }
+
+  .step-label::before {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, var(--line), transparent);
+    order: 3;
+  }
+
+  .step-label span.num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--gold);
+    color: #fff;
+    font-size: 11px;
   }
 
   .hint {
-    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
     font-size: 11.5px;
     color: var(--ink-soft);
     margin: -14px 0 22px;
     line-height: 1.4;
   }
 
+  .wave-divider {
+    display: block;
+    width: 100%;
+    height: 22px;
+    margin-top: -1px;
+  }
+
   .footer {
     padding: 16px 32px 24px;
-    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
     font-size: 10.5px;
     color: var(--ink-soft);
     letter-spacing: 0.02em;
@@ -278,13 +357,23 @@
 
 <div class="sheet">
   <div class="letterhead">
+    <svg class="letterhead-icon" width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M4 20c4 0 4-6 8-6s4 6 8 6 4-6 8-6 4 6 8 6 4-6 8-6" stroke="#33c2b8" stroke-width="2" stroke-linecap="round"/>
+      <path d="M4 30c4 0 4-6 8-6s4 6 8 6 4-6 8-6 4 6 8 6 4-6 8-6" stroke="#bfdde2" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+      <path d="M4 40c4 0 4-6 8-6s4 6 8 6 4-6 8-6 4 6 8 6 4-6 8-6" stroke="#33c2b8" stroke-width="2" stroke-linecap="round" opacity="0.35"/>
+    </svg>
     <p class="eyebrow">Premium Schedule</p>
     <h1>Private Health Quoter</h1>
     <p>Find your estimated monthly premium! Ages 18&ndash;64.</p>
   </div>
 
+  <svg class="wave-divider" viewBox="0 0 600 24" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M0 12 C 75 24, 150 0, 225 12 C 300 24, 375 0, 450 12 C 525 24, 570 6, 600 12 L 600 0 L 0 0 Z" fill="var(--navy-deep)"/>
+    <path d="M0 16 C 75 26, 150 6, 225 16 C 300 26, 375 6, 450 16 C 525 26, 570 10, 600 16 L 600 24 L 0 24 Z" fill="var(--paper)"/>
+  </svg>
+
   <div class="body">
-    <p class="step-label first">Step 1 &middot; Get Your Estimate</p>
+    <p class="step-label first"><span class="num">1</span>Get Your Estimate</p>
 
     <div class="field">
       <label for="zipInput">Zip Code</label>
@@ -315,12 +404,12 @@
     <div class="result">
       <div class="result-row">
         <span class="label">Monthly Premium</span>
-        <span class="amount empty" id="amountDisplay">Enter age, sex &amp smoker status</span>
+        <span class="amount empty" id="amountDisplay">Enter age &amp; sex</span>
       </div>
-      <p class="result-note" id="resultNote">Rates subject to change and apply to ages 18 through 64. Outside that range or for family rates, contact underwriting directly: 561-709-3617.</p>
+      <p class="result-note" id="resultNote">Rates subject to change and apply to ages 18 through 64. Outside that range and for families, contact underwriting directly: 561-709-3617.</p>
     </div>
 
-    <p class="step-label">Step 2 &middot; Complete Enrollment</p>
+    <p class="step-label"><span class="num">2</span>Complete Enrollment</p>
 
     <div class="field">
       <label class="family-check">
@@ -516,7 +605,7 @@
         headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify(payload)
       });
-      statusEl.textContent = 'Sent.';
+      statusEl.textContent = 'Saved. Record added to the client sheet.';
       statusEl.className = 'status-msg success';
       resetForm();
     } catch (err) {
