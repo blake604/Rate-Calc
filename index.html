@@ -256,6 +256,108 @@
     line-height: 1.5;
   }
 
+  .add-person-btn {
+    width: 100%;
+    padding: 12px;
+    margin-top: 4px;
+    background: transparent;
+    color: var(--navy);
+    border: 1.5px dashed var(--gold);
+    font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    cursor: pointer;
+    border-radius: 10px;
+    transition: background 0.15s ease, border-style 0.15s ease;
+  }
+
+  .add-person-btn:hover {
+    background: rgba(31,156,149,0.08);
+    border-style: solid;
+  }
+
+  .add-person-msg {
+    font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 11.5px;
+    color: var(--err);
+    text-align: center;
+    margin: 8px 0 0;
+    min-height: 14px;
+  }
+
+  .people-list { margin-top: 18px; }
+
+  .people-list:empty { margin-top: 0; }
+
+  .person-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 14px;
+    background: var(--ledger);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    margin-bottom: 8px;
+  }
+
+  .person-row .person-info {
+    font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 13px;
+    color: var(--ink);
+  }
+
+  .person-row .person-info .person-rate {
+    font-weight: 700;
+    color: var(--good);
+    margin-left: 6px;
+  }
+
+  .person-row .remove-btn {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(181,69,58,0.1);
+    color: var(--err);
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .person-row .remove-btn:hover { background: rgba(181,69,58,0.2); }
+
+  .total-card {
+    margin-top: 14px;
+    background: linear-gradient(160deg, var(--sea-glow), var(--navy));
+    border-radius: 14px;
+    padding: 18px 22px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+
+  .total-card .label {
+    font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #cdeaea;
+  }
+
+  .total-card .amount {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 28px;
+    font-weight: 500;
+    color: #fff;
+  }
+
   .submit-btn {
     width: 100%;
     margin-top: 26px;
@@ -364,7 +466,7 @@
     </svg>
     <p class="eyebrow">Premium Schedule</p>
     <h1>Private Health Quoter</h1>
-    <p>Find your estimated monthly premium! Ages 18&ndash;64.</p>
+    <p>Find your estimated monthly premium! Ages 0&ndash;64.</p>
   </div>
 
   <svg class="wave-divider" viewBox="0 0 600 24" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
@@ -382,7 +484,7 @@
 
     <div class="field">
       <label for="ageInput">Your Age</label>
-      <input type="number" id="ageInput" min="18" max="64" placeholder="e.g. 42">
+      <input type="number" id="ageInput" min="0" max="64" placeholder="e.g. 42">
     </div>
 
     <div class="field">
@@ -403,10 +505,19 @@
 
     <div class="result">
       <div class="result-row">
-        <span class="label">Monthly Premium</span>
+        <span class="label">This Person's Premium</span>
         <span class="amount empty" id="amountDisplay">Enter age &amp; sex</span>
       </div>
-      <p class="result-note" id="resultNote">Rates subject to change and apply to ages 18 through 64. Outside that range and for families, contact underwriting directly: 561-709-3617.</p>
+      <p class="result-note" id="resultNote">Ages 0&ndash;64 quotable. Dependents under 18 are billed a flat rate; adult rates vary by age, sex, and smoker status. Outside this range, contact underwriting directly: 561-709-3617.</p>
+    </div>
+
+    <button type="button" class="add-person-btn" id="addPersonBtn" onclick="addPerson()">+ Add This Person to Quote</button>
+    <p class="add-person-msg" id="addPersonMsg"></p>
+
+    <div class="people-list" id="peopleList"></div>
+    <div class="total-card" id="totalCard" style="display:none;">
+      <span class="label">Household Total</span>
+      <span class="amount" id="totalAmount">$0.00</span>
     </div>
 
     <p class="step-label"><span class="num">2</span>Complete Enrollment</p>
@@ -507,6 +618,7 @@
   let selectedGender = null;
   let selectedSmoker = null;
   let currentRate = null;
+  let people = [];
 
   function setGender(g) {
     selectedGender = g;
@@ -527,6 +639,8 @@
     document.getElementById('familyPanel').classList.toggle('open', checked);
   }
 
+  const UNDER_18_RATE = 41.44;
+
   function compute() {
     const ageInput = document.getElementById('ageInput').value;
     const amountEl = document.getElementById('amountDisplay');
@@ -537,15 +651,31 @@
       amountEl.textContent = 'Enter age, sex & smoker status';
       amountEl.classList.add('empty');
       currentRate = null;
-      noteEl.textContent = 'Rates apply to ages 18 through 64. Outside that range, contact underwriting directly.';
+      noteEl.textContent = 'Rates apply to all ages. Dependents under 18 are quoted at a flat rate.';
       return;
     }
 
-    if (isNaN(age) || age < 18 || age > 64) {
+    if (isNaN(age) || age < 0) {
+      amountEl.textContent = 'Enter age, sex & smoker status';
+      amountEl.classList.add('empty');
+      currentRate = null;
+      noteEl.textContent = 'Enter a valid age to see the premium.';
+      return;
+    }
+
+    if (age > 64) {
       amountEl.textContent = 'Out of range';
       amountEl.classList.add('empty');
       currentRate = null;
-      noteEl.textContent = 'This schedule only covers ages 18 through 64. Contact underwriting for other ages.';
+      noteEl.textContent = 'This schedule only covers ages 0 through 64. Contact underwriting for other ages.';
+      return;
+    }
+
+    if (age < 18) {
+      currentRate = UNDER_18_RATE;
+      amountEl.textContent = '$' + UNDER_18_RATE.toFixed(2);
+      amountEl.classList.remove('empty');
+      noteEl.textContent = 'Flat dependent rate for age ' + age + ' (under 18).';
       return;
     }
 
@@ -556,6 +686,59 @@
     noteEl.textContent = 'Based on age ' + age + ', ' + (selectedGender === 'M' ? 'male' : 'female') + ', ' + (selectedSmoker ? 'smoker' : 'non-smoker') + '.';
   }
 
+  function addPerson() {
+    const msgEl = document.getElementById('addPersonMsg');
+    const age = parseInt(document.getElementById('ageInput').value, 10);
+
+    if (!currentRate || !selectedGender || selectedSmoker === null || isNaN(age) || age < 0 || age > 64) {
+      msgEl.textContent = 'Complete a valid age, sex, and smoker status before adding.';
+      return;
+    }
+
+    msgEl.textContent = '';
+    people.push({ age: age, sex: selectedGender, smoker: selectedSmoker, rate: currentRate });
+    renderPeople();
+
+    document.getElementById('ageInput').value = '';
+    selectedGender = null;
+    selectedSmoker = null;
+    document.getElementById('btnM').classList.remove('active');
+    document.getElementById('btnF').classList.remove('active');
+    document.getElementById('btnSmokerYes').classList.remove('active');
+    document.getElementById('btnSmokerNo').classList.remove('active');
+    compute();
+    document.getElementById('ageInput').focus();
+  }
+
+  function removePerson(index) {
+    people.splice(index, 1);
+    renderPeople();
+  }
+
+  function renderPeople() {
+    const listEl = document.getElementById('peopleList');
+    const totalCard = document.getElementById('totalCard');
+    const totalAmountEl = document.getElementById('totalAmount');
+
+    listEl.innerHTML = people.map(function(p, i) {
+      const sexLabel = p.sex === 'M' ? 'Male' : 'Female';
+      const smokerLabel = p.smoker ? 'Smoker' : 'Non-smoker';
+      return '<div class="person-row">' +
+        '<span class="person-info">Age ' + p.age + ' &middot; ' + sexLabel + ' &middot; ' + smokerLabel +
+        '<span class="person-rate">$' + p.rate.toFixed(2) + '</span></span>' +
+        '<button type="button" class="remove-btn" onclick="removePerson(' + i + ')" aria-label="Remove">&times;</button>' +
+        '</div>';
+    }).join('');
+
+    if (people.length > 0) {
+      const total = people.reduce(function(sum, p) { return sum + p.rate; }, 0);
+      totalCard.style.display = 'flex';
+      totalAmountEl.textContent = '$' + total.toFixed(2);
+    } else {
+      totalCard.style.display = 'none';
+    }
+  }
+
   document.getElementById('zipInput').addEventListener('input', function() {
     this.value = this.value.replace(/[^0-9]/g, '').slice(0, 5);
   });
@@ -564,12 +747,17 @@
   async function submitEntry() {
     const statusEl = document.getElementById('statusMsg');
     const btn = document.getElementById('submitBtn');
-    const age = document.getElementById('ageInput').value;
     const zip = document.getElementById('zipInput').value;
     const familyIncluded = document.getElementById('familyCheck').checked;
 
-    if (!zip || !age || !selectedGender || selectedSmoker === null) {
-      statusEl.textContent = 'Please complete zip code, age, sex, and smoker status before submitting.';
+    // If there's a completed but not-yet-added person in the current fields, add them automatically
+    const pendingAge = parseInt(document.getElementById('ageInput').value, 10);
+    if (currentRate && selectedGender && selectedSmoker !== null && !isNaN(pendingAge) && pendingAge >= 0 && pendingAge <= 64) {
+      addPerson();
+    }
+
+    if (!zip || people.length === 0) {
+      statusEl.textContent = 'Please add zip code and at least one person\'s age, sex, and smoker status.';
       statusEl.className = 'status-msg error';
       return;
     }
@@ -580,13 +768,15 @@
       return;
     }
 
+    const total = people.reduce(function(sum, p) { return sum + p.rate; }, 0);
+
     const payload = {
       timestamp: new Date().toISOString(),
-      age: age,
-      sex: selectedGender,
-      smoker: selectedSmoker ? 'Yes' : 'No',
       zip: zip,
-      monthlyPremium: currentRate,
+      people: people.map(function(p) {
+        return { age: p.age, sex: p.sex, smoker: p.smoker ? 'Yes' : 'No', monthlyPremium: p.rate };
+      }),
+      totalMonthlyPremium: total,
       familyIncluded: familyIncluded ? 'Yes' : 'No',
       familyName: familyIncluded ? document.getElementById('famName').value : '',
       familyPhone: familyIncluded ? document.getElementById('famPhone').value : '',
@@ -630,6 +820,8 @@
     selectedGender = null;
     selectedSmoker = null;
     currentRate = null;
+    people = [];
+    renderPeople();
     document.getElementById('btnM').classList.remove('active');
     document.getElementById('btnF').classList.remove('active');
     document.getElementById('btnSmokerYes').classList.remove('active');
