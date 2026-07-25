@@ -467,6 +467,22 @@
     margin-top: 4px;
   }
 
+  .consent-label {
+    align-items: flex-start !important;
+    font-size: 12px !important;
+    line-height: 1.5;
+    color: var(--ink-soft);
+  }
+
+  .consent-label input {
+    margin-top: 3px;
+    flex-shrink: 0;
+  }
+
+  .consent-label strong { color: var(--ink); }
+
+  #consentPhoneDisplay { font-weight: 600; color: var(--navy); }
+
   .field-error {
     font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
     font-size: 11px;
@@ -608,9 +624,16 @@
     </div>
 
     <div class="field consent-field">
-      <label class="family-check">
+      <label class="family-check consent-label">
         <input type="checkbox" id="consentCheck">
-        I agree to be contacted about this quote by phone, text, or email.
+        <span>
+          By checking this box, I agree that <strong>[YOUR AGENCY/COMPANY NAME]</strong> (NPN 21495656) may contact me
+          at <span id="consentPhoneDisplay">the phone number provided above</span> by call, text, or email —
+          including through an automatic telephone dialing system or a prerecorded/artificial voice — to discuss
+          this health insurance quote. Message and data rates may apply. Message frequency varies.
+          <strong>Consent is not required to receive a quote or purchase coverage.</strong>
+          Reply STOP to any text to opt out at any time, or contact us directly to be removed from our contact list.
+        </span>
       </label>
       <p class="field-error" id="consentError">Please confirm consent to be contacted before submitting.</p>
     </div>
@@ -715,6 +738,8 @@
     document.getElementById('familyPanel').classList.toggle('open', checked);
     saveDraft();
   }
+
+  const CONSENT_DISCLOSURE_TEXT = "By checking this box, I agree that [YOUR AGENCY/COMPANY NAME] (NPN 21495656) may contact me at the phone number provided by call, text, or email — including through an automatic telephone dialing system or a prerecorded/artificial voice — to discuss this health insurance quote. Message and data rates may apply. Message frequency varies. Consent is not required to receive a quote or purchase coverage. Reply STOP to any text to opt out at any time, or contact us directly to be removed from our contact list.";
 
   const UNDER_18_RATE = 41.44;
 
@@ -861,7 +886,10 @@
     if (draft.selectedSmoker !== null && draft.selectedSmoker !== undefined) setSmoker(draft.selectedSmoker);
     if (Array.isArray(draft.people)) { people = draft.people; renderPeople(); }
     if (draft.famName) document.getElementById('famName').value = draft.famName;
-    if (draft.famPhone) document.getElementById('famPhone').value = draft.famPhone;
+    if (draft.famPhone) {
+      document.getElementById('famPhone').value = draft.famPhone;
+      document.getElementById('consentPhoneDisplay').textContent = draft.famPhone;
+    }
     if (draft.famEmail) document.getElementById('famEmail').value = draft.famEmail;
     if (draft.famTime) document.getElementById('famTime').value = draft.famTime;
     if (draft.familyIncluded) {
@@ -873,6 +901,12 @@
 
   ['famName', 'famPhone', 'famEmail', 'famTime'].forEach(function(id) {
     document.getElementById(id).addEventListener('input', saveDraft);
+  });
+
+  document.getElementById('famPhone').addEventListener('input', function() {
+    const display = document.getElementById('consentPhoneDisplay');
+    const val = this.value.trim();
+    display.textContent = val ? val : 'the phone number provided above';
   });
 
   function isValidEmail(value) {
@@ -1022,6 +1056,8 @@
       }),
       totalMonthlyPremium: total,
       consentToContact: 'Yes',
+      consentPhoneNumber: contactInfoChecked ? document.getElementById('famPhone').value : '',
+      consentDisclosureText: CONSENT_DISCLOSURE_TEXT,
       familyIncluded: familyIncluded ? 'Yes' : 'No',
       familyName: contactInfoChecked ? document.getElementById('famName').value : '',
       familyPhone: contactInfoChecked ? document.getElementById('famPhone').value : '',
@@ -1059,6 +1095,7 @@
     document.getElementById('famPhone').value = '';
     document.getElementById('famEmail').value = '';
     document.getElementById('famTime').value = '';
+    document.getElementById('consentPhoneDisplay').textContent = 'the phone number provided above';
     document.getElementById('consentCheck').checked = false;
     document.getElementById('consentError').classList.remove('show');
     document.getElementById('famPhoneError').classList.remove('show');
