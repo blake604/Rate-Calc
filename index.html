@@ -40,18 +40,42 @@
   }
 
   @keyframes cardEnter {
-    from { opacity: 0; transform: translateY(28px) scale(0.98); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
+    0%   { opacity: 0; transform: translateY(90px) rotate(-8deg) scale(0.75); }
+    45%  { opacity: 1; transform: translateY(-18px) rotate(4deg) scale(1.05); }
+    65%  { transform: translateY(8px) rotate(-2.5deg) scale(0.98); }
+    80%  { transform: translateY(-4px) rotate(1.3deg) scale(1.015); }
+    92%  { transform: translateY(2px) rotate(-0.6deg) scale(0.997); }
+    100% { opacity: 1; transform: translateY(0) rotate(0deg) scale(1); }
+  }
+
+  @keyframes flyInLeft {
+    0%   { opacity: 0; transform: translateX(-70px) rotate(-10deg); }
+    55%  { opacity: 1; transform: translateX(14px) rotate(4deg); }
+    75%  { transform: translateX(-6px) rotate(-2deg); }
+    90%  { transform: translateX(3px) rotate(1deg); }
+    100% { transform: translateX(0) rotate(0deg); }
+  }
+
+  @keyframes flyInRight {
+    0%   { opacity: 0; transform: translateX(70px) rotate(10deg); }
+    55%  { opacity: 1; transform: translateX(-14px) rotate(-4deg); }
+    75%  { transform: translateX(6px) rotate(2deg); }
+    90%  { transform: translateX(-3px) rotate(-1deg); }
+    100% { transform: translateX(0) rotate(0deg); }
   }
 
   @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+    0%   { opacity: 0; transform: translateY(30px) rotate(-3deg) scale(0.9); }
+    60%  { opacity: 1; transform: translateY(-6px) rotate(1.5deg) scale(1.02); }
+    100% { transform: translateY(0) rotate(0deg) scale(1); }
   }
 
   @keyframes iconPop {
-    from { opacity: 0; transform: scale(0.7) rotate(-8deg); }
-    to { opacity: 0.5; transform: scale(1) rotate(0deg); }
+    0%   { opacity: 0; transform: scale(0) rotate(-220deg); }
+    55%  { opacity: 0.7; transform: scale(1.4) rotate(30deg); }
+    75%  { transform: scale(0.85) rotate(-14deg); }
+    90%  { transform: scale(1.08) rotate(6deg); }
+    100% { opacity: 0.5; transform: scale(1) rotate(0deg); }
   }
 
   .sheet {
@@ -65,7 +89,7 @@
       0 1px 2px rgba(5,34,53,0.06),
       0 8px 24px rgba(5,34,53,0.10),
       0 30px 60px -20px rgba(5,34,53,0.35);
-    animation: cardEnter 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation: cardEnter 1s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
   .letterhead {
@@ -84,7 +108,7 @@
     top: 20px;
     right: 24px;
     opacity: 0.5;
-    animation: iconPop 0.6s ease 0.15s both;
+    animation: iconPop 0.9s ease 0.2s both;
   }
 
   .letterhead .eyebrow {
@@ -95,7 +119,7 @@
     text-transform: uppercase;
     color: var(--gold-bright);
     margin: 0 0 8px;
-    animation: fadeUp 0.6s ease 0.2s both;
+    animation: flyInLeft 0.7s ease 0.3s both;
   }
 
   .letterhead h1 {
@@ -104,7 +128,7 @@
     font-size: 30px;
     font-weight: 500;
     letter-spacing: 0.005em;
-    animation: fadeUp 0.6s ease 0.3s both;
+    animation: flyInRight 0.7s ease 0.4s both;
   }
 
   .letterhead p {
@@ -114,12 +138,12 @@
     margin: 10px 0 0;
     line-height: 1.5;
     max-width: 380px;
-    animation: fadeUp 0.6s ease 0.4s both;
+    animation: flyInLeft 0.7s ease 0.5s both;
   }
 
   .body {
     padding: 34px 32px 32px;
-    animation: fadeUp 0.6s ease 0.35s both;
+    animation: fadeUp 0.6s ease 0.55s both;
   }
 
   @media (prefers-reduced-motion: reduce) {
