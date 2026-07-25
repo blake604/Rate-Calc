@@ -884,6 +884,71 @@
     return digits.length >= 10;
   }
 
+  function launchConfetti() {
+    const canvas = document.createElement('canvas');
+    canvas.style.position = 'fixed';
+    canvas.style.top = '0';
+    canvas.style.left = '0';
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
+    canvas.style.pointerEvents = 'none';
+    canvas.style.zIndex = '9999';
+    document.body.appendChild(canvas);
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    const ctx = canvas.getContext('2d');
+
+    const colors = ['#1f9c95', '#33c2b8', '#0b4f6c', '#0e6e8c', '#157a68', '#ffffff'];
+    const particles = [];
+    const count = 140;
+
+    for (let i = 0; i < count; i++) {
+      particles.push({
+        x: Math.random() * canvas.width,
+        y: -20 - Math.random() * canvas.height * 0.4,
+        r: 4 + Math.random() * 4,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        vx: -2 + Math.random() * 4,
+        vy: 2 + Math.random() * 3,
+        rot: Math.random() * 360,
+        vr: -6 + Math.random() * 12,
+        shape: Math.random() < 0.5 ? 'rect' : 'circle'
+      });
+    }
+
+    let frame = 0;
+    const maxFrames = 200;
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particles.forEach(function(p) {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.03;
+        p.rot += p.vr;
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rot * Math.PI / 180);
+        ctx.fillStyle = p.color;
+        if (p.shape === 'rect') {
+          ctx.fillRect(-p.r, -p.r / 2, p.r * 2, p.r);
+        } else {
+          ctx.beginPath();
+          ctx.arc(0, 0, p.r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      });
+      frame++;
+      if (frame < maxFrames) {
+        requestAnimationFrame(draw);
+      } else {
+        canvas.remove();
+      }
+    }
+    draw();
+  }
+
   async function submitEntry() {
     const statusEl = document.getElementById('statusMsg');
     const btn = document.getElementById('submitBtn');
@@ -977,6 +1042,7 @@
       });
       statusEl.textContent = 'Saved. Record added to the client sheet.';
       statusEl.className = 'status-msg success';
+      launchConfetti();
       resetForm();
     } catch (err) {
       statusEl.textContent = 'Could not save. Check your connection and try again.';
