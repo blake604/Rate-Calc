@@ -36,6 +36,7 @@
     align-items: flex-start;
     justify-content: center;
     padding: 48px 20px;
+    overflow-x: hidden; /* card enters from off-screen left */
     color: var(--ink);
     font-family: 'Nunito Sans', 'Helvetica Neue', Arial, sans-serif;
     background:
@@ -45,14 +46,37 @@
       linear-gradient(155deg, #fff5eb 0%, #f3f0ff 46%, #e8ebff 100%);
   }
 
-  @keyframes gentleEnter {
-    from { opacity: 0; transform: translateY(18px); }
-    to { opacity: 1; transform: translateY(0); }
+  /* ---------- Opening sequence ---------- */
+  /* 1) Card slides in from the left (~0.8s), header text still hidden.
+     2) Eyebrow + icon rise, title pops in word by word, subtitle rises.
+     3) Everything below the letterhead drops out from under it. */
+
+  @keyframes cardSlideIn {
+    from { opacity: 0; transform: translateX(-60vw) scale(0.985); }
+    to   { opacity: 1; transform: translateX(0) scale(1); }
   }
 
-  @keyframes softFade {
-    from { opacity: 0; }
-    to { opacity: 0.46; }
+  @keyframes riseIn {
+    from { opacity: 0; transform: translateY(14px); filter: blur(3px); }
+    to   { opacity: 1; transform: translateY(0);    filter: blur(0); }
+  }
+
+  /* Same rise, but the letterhead waves settle at 0.46 opacity, not 1. */
+  @keyframes iconRise {
+    from { opacity: 0;    transform: translateY(14px); filter: blur(3px); }
+    to   { opacity: 0.46; transform: translateY(0);    filter: blur(0); }
+  }
+
+  /* Words snap into place with a quick overshoot */
+  @keyframes popIn {
+    0%   { opacity: 0; transform: scale(0.55); }
+    70%  { opacity: 1; transform: scale(1.12); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+
+  @keyframes dropReveal {
+    from { max-height: 0;      opacity: 0; }
+    to   { max-height: 4000px; opacity: 1; }
   }
 
   .sheet {
@@ -64,7 +88,21 @@
     border: 1px solid rgba(255, 255, 255, 0.78);
     border-radius: 26px;
     box-shadow: var(--shadow);
-    animation: gentleEnter 0.55s ease-out both;
+    animation: cardSlideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  /* Wave divider + body + footer drop down together once the header has read. */
+  .reveal.intro {
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    animation: dropReveal 1.4s ease 1.92s forwards;
+  }
+
+  /* Set by JS on animationend so a growing people list is never clipped. */
+  .reveal.intro.done {
+    overflow: visible;
+    max-height: none;
   }
 
   .sheet::before {
@@ -100,8 +138,8 @@
     position: absolute;
     top: 24px;
     right: 28px;
-    opacity: 0.46;
-    animation: softFade 0.75s ease both;
+    opacity: 0;
+    animation: iconRise 0.9s ease-out 0.72s forwards;
   }
 
   .letterhead .eyebrow {
@@ -114,6 +152,8 @@
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: #ffd8ca;
+    opacity: 0;
+    animation: riseIn 0.9s ease-out 0.72s forwards;
   }
 
   .letterhead h1 {
@@ -128,6 +168,13 @@
     letter-spacing: -0.015em;
   }
 
+  /* Title reveals one word at a time (per-word delay set inline on each .w) */
+  .letterhead h1 .w {
+    display: inline-block;
+    opacity: 0;
+    animation: popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+
   .letterhead p {
     position: relative;
     z-index: 1;
@@ -137,6 +184,11 @@
     font-family: 'Nunito Sans', 'Helvetica Neue', Arial, sans-serif;
     font-size: 14.5px;
     line-height: 1.65;
+  }
+
+  .letterhead p.sub {
+    opacity: 0;
+    animation: riseIn 0.95s ease-out 1.42s forwards;
   }
 
   .wave-divider {
@@ -566,6 +618,112 @@
   .footer a:hover { text-decoration: underline; }
   .footer .legal-line { margin: 0; line-height: 1.6; }
 
+  /* ---------- Legal documents (Privacy / Terms / TCPA) ---------- */
+  .legal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+    background: rgba(21, 26, 79, 0.55);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+  }
+
+  .legal-overlay.open { display: flex; }
+
+  .legal-modal {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 660px;
+    max-height: 88vh;
+    overflow: hidden;
+    background: var(--paper);
+    border-radius: 22px;
+    box-shadow: var(--shadow);
+    animation: riseIn 0.28s ease-out both;
+  }
+
+  .legal-modal-head {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 22px 26px 20px;
+    color: #ffffff;
+    background:
+      radial-gradient(480px 250px at 2% -20%, rgba(255, 173, 143, 0.48), transparent 60%),
+      linear-gradient(132deg, #6878ff 0%, var(--navy) 44%, var(--navy-deep) 100%);
+  }
+
+  .legal-modal-head h2 {
+    margin: 0;
+    font-family: 'DM Serif Display', Georgia, serif;
+    font-size: 25px;
+    font-weight: 400;
+    letter-spacing: -0.015em;
+  }
+
+  .legal-close {
+    flex-shrink: 0;
+    width: 34px;
+    height: 34px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.16);
+    color: #ffffff;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .legal-close:hover { background: rgba(255, 255, 255, 0.3); }
+
+  .legal-close:focus-visible {
+    outline: 2px solid var(--gold-bright);
+    outline-offset: 2px;
+  }
+
+  .legal-modal-body {
+    overflow-y: auto;
+    padding: 26px 30px 32px;
+    color: var(--ink);
+    font-family: 'Nunito Sans', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.7;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .legal-modal-body h3 {
+    margin: 28px 0 8px;
+    color: var(--navy);
+    font-family: 'Nunito Sans', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .legal-modal-body h3:first-child { margin-top: 0; }
+  .legal-modal-body p { margin: 0 0 12px; }
+  .legal-modal-body ul { margin: 0 0 12px; padding-left: 20px; }
+  .legal-modal-body li { margin-bottom: 5px; }
+
+  .legal-modal-body .updated {
+    margin-bottom: 20px;
+    color: var(--ink-soft);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
   @media (max-width: 620px) {
     body { padding: 18px 12px; }
     .sheet { border-radius: 20px; }
@@ -586,12 +744,18 @@
     .result-row .amount { width: 100%; text-align: left; }
     .result-row .amount.empty { max-width: none; }
     .total-card { align-items: flex-start; flex-direction: column; gap: 4px; }
+    .legal-modal-head { padding: 18px 20px 16px; }
+    .legal-modal-head h2 { font-size: 21px; }
+    .legal-modal-body { padding: 22px 20px 26px; }
   }
 
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
       scroll-behavior: auto !important;
       animation-duration: 0.01ms !important;
+      /* The opening sequence is delay-driven; without this the page would sit
+         blank for 1.7s before the panel appeared. */
+      animation-delay: 0s !important;
       animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
     }
@@ -599,6 +763,8 @@
 
   @media print {
     body { background: none; padding: 0; }
+    .legal-overlay { display: none !important; }
+    .reveal.intro { max-height: none !important; opacity: 1 !important; overflow: visible !important; }
     .sheet { max-width: 100%; border: none; border-radius: 0; box-shadow: none; }
     .add-person-btn, .add-person-msg, .submit-btn, .print-btn, .status-msg,
     .step-label, .family-check, .family-panel, .wave-divider, .letterhead-icon,
@@ -617,9 +783,11 @@
       <path d="M4 40c4 0 4-6 8-6s4 6 8 6 4-6 8-6 4 6 8 6 4-6 8-6" stroke="#ffad8f" stroke-width="2" stroke-linecap="round" opacity="0.35"/>
     </svg>
     <p class="eyebrow">Simple Monthly Estimate</p>
-    <h1>Your Health Coverage Estimate</h1>
-    <p>See an estimated monthly premium in just a few simple steps. Available for ages 0&ndash;64.</p>
+    <h1><span class="w" style="animation-delay:.88s">Your</span> <span class="w" style="animation-delay:1.00s">Health</span> <span class="w" style="animation-delay:1.12s">Coverage</span> <span class="w" style="animation-delay:1.24s">Estimate</span></h1>
+    <p class="sub">See an estimated monthly premium in just a few simple steps. Available for ages 0&ndash;64.</p>
   </div>
+
+  <div class="reveal intro" id="revealPanel">
 
   <svg class="wave-divider" viewBox="0 0 600 24" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
     <path d="M0 12 C 75 24, 150 0, 225 12 C 300 24, 375 0, 450 12 C 525 24, 570 6, 600 12 L 600 0 L 0 0 Z" fill="var(--navy-deep)"/>
@@ -728,7 +896,19 @@
 
   <div class="footer">
    
-    <p class="legal-line">By submitting this form, you agree to our <a href="#" target="_blank">Privacy Policy</a> and <a href="#" target="_blank">Terms of Service</a>.</p>
+    <p class="legal-line">By submitting this form, you agree to our <a href="#" onclick="openLegal('privacy'); return false;">Privacy Policy</a>, <a href="#" onclick="openLegal('terms'); return false;">Terms of Service</a>, and <a href="#" onclick="openLegal('tcpa'); return false;">TCPA Disclaimer</a>.</p>
+  </div>
+
+  </div><!-- /.reveal.intro -->
+</div>
+
+<div class="legal-overlay" id="legalOverlay" onclick="if (event.target === this) closeLegal();">
+  <div class="legal-modal" role="dialog" aria-modal="true" aria-labelledby="legalTitle">
+    <div class="legal-modal-head">
+      <h2 id="legalTitle">Privacy Policy</h2>
+      <button type="button" class="legal-close" onclick="closeLegal()" aria-label="Close">&times;</button>
+    </div>
+    <div class="legal-modal-body" id="legalBody"></div>
   </div>
 </div>
 
@@ -1202,6 +1382,136 @@
   }
 
   loadDraft();
+
+  /* ---------- Opening sequence: unclamp the panel once it has dropped ---------- */
+  (function () {
+    const panel = document.getElementById('revealPanel');
+    if (!panel) return;
+    panel.addEventListener('animationend', function (e) {
+      if (e.animationName === 'dropReveal') panel.classList.add('done');
+    });
+  })();
+
+  /* ---------- Legal documents ---------- */
+  const LEGAL_DOCS = {
+    privacy: {
+      title: 'Privacy Policy',
+      html: `
+        <p class="updated">Last updated: 05/11/2026</p>
+
+        <p>Blake Moree &amp; Anthony Benedict ("we," "us," or "our") is committed to protecting the privacy and security of your personal information, including that of your children. This Privacy Policy outlines our practices concerning the collection, use, and protection of the information we collect from users of our website. By accessing or using our website, floridacurrentinsurance.com, you consent to the practices described in this Privacy Policy.</p>
+
+        <h3>1. Information We Collect</h3>
+        <p>We may collect the following personal information from users of our website, privatehealthquoter.com</p>
+        <ul>
+          <li>Full names</li>
+          <li>Phone numbers</li>
+          <li>Social Security numbers</li>
+          <li>Date of birth</li>
+          <li>Addresses</li>
+          <li>Banking Information</li>
+          <li>Children's personal information, including names, dates of birth, and relevant health information, if provided for inclusion in health insurance plans.</li>
+        </ul>
+        <p>We collect this information in order to provide you with information and services related to health insurance, including the necessary information to include your children on health insurance plans.</p>
+
+        <h3>2. How We Use Your Information</h3>
+        <p>We use the collected information for the following purposes:</p>
+        <ul>
+          <li>To provide information and services related to health insurance.</li>
+          <li>To verify your identity.</li>
+          <li>To communicate with you regarding your requests.</li>
+          <li>To improve our website and services.</li>
+          <li>To include your children on health insurance plans, if applicable.</li>
+          <li>To comply with legal and regulatory requirements.</li>
+        </ul>
+
+        <h3>3. Disclosure of Your Information</h3>
+        <p>We may share your information, including your children's information, with the following third parties:</p>
+        <ul>
+          <li>Insurance providers and agents for the purpose of assisting you in obtaining health insurance, including coverage for your children.</li>
+          <li>Regulatory authorities and law enforcement agencies to comply with legal obligations.</li>
+          <li>Service providers who assist us in running our website and services.</li>
+        </ul>
+
+        <h3>4. Your Choices</h3>
+        <p>You have the following choices concerning your personal information and your children's information:</p>
+        <ul>
+          <li>You can request access to your personal information.</li>
+          <li>You can request corrections to inaccurate or incomplete information.</li>
+          <li>You can request the inclusion or removal of your children from health insurance plans.</li>
+          <li>You can opt out of receiving promotional and marketing materials.</li>
+          <li>You can request your information to not be sold to third parties, if applicable.</li>
+        </ul>
+        <p>Please note that certain information may be retained for legal and regulatory purposes.</p>
+
+        <h3>5. Security</h3>
+        <p>We take reasonable steps to protect the security and confidentiality of your personal information and that of your children. However, no data transmission over the internet is completely secure, and we cannot guarantee the security of the information you provide to us.</p>
+
+        <h3>6. Children's Privacy</h3>
+        <p>Our website is not intended for children under the age of 18. We do not knowingly collect personal information from children. If you provide your children's information for the purpose of including them on health insurance plans, we will handle this information in accordance with this Privacy Policy and applicable laws.</p>
+
+        <h3>7. Changes to this Privacy Policy</h3>
+        <p>We may update this Privacy Policy from time to time. Any changes will be posted on our website, and the date of the most recent update will be indicated at the top of the page.</p>
+
+        <h3>8. Contact Us</h3>
+        <p>If you have any questions, concerns, or requests related to this Privacy Policy or the way we handle your personal information, including that of your children, please contact us at: [email address pending]</p>
+
+        <h3>9. Consent</h3>
+        <p>By using our website, you consent to the collection and use of your personal information, including that of your children, as described in this Privacy Policy.</p>
+
+        <p>This Privacy Policy is effective as of the last update date indicated at the top of the page. Please review this Privacy Policy regularly for any updates or changes.</p>
+      `
+    },
+    terms: {
+      title: 'Terms of Service',
+      html: `
+        <p>By using our services, you agree to the following terms:</p>
+
+        <h3>Representation</h3>
+        <p>You grant the authorized agent, as mentioned in the attestation disclaimer, the authority to act on your behalf concerning health insurance matters, including enrollment, renewals, and related decisions.</p>
+
+        <h3>Accuracy</h3>
+        <p>You confirm that all information provided is true and accurate. False or misleading information can lead to the termination of services.</p>
+
+        <h3>Revocation</h3>
+        <p>Your consent remains in effect until you revoke it. You may revoke or modify your consent at any time.</p>
+
+        <h3>Limitation of Liability</h3>
+        <p>The authorized agent and associated entities are not liable for any errors or omissions in the services provided or for any damages, including indirect or consequential damages.</p>
+      `
+    },
+    tcpa: {
+      title: 'TCPA Disclaimer',
+      html: `
+        <p>By providing your phone number, you expressly consent to receive auto-dialed and/or pre-recorded telemarketing calls, text messages, and/or emails from the authorized agent mentioned in the attestation disclaimer at the phone number and email address you provided, including for marketing purposes.</p>
+
+        <p>You understand that consent is not a condition of purchase.</p>
+
+        <p>Standard message and data rates may apply. Message frequency varies.</p>
+      `
+    }
+  };
+
+  function openLegal(key) {
+    const doc = LEGAL_DOCS[key];
+    if (!doc) return;
+    document.getElementById('legalTitle').textContent = doc.title;
+    const bodyEl = document.getElementById('legalBody');
+    bodyEl.innerHTML = doc.html;
+    bodyEl.scrollTop = 0;
+    document.getElementById('legalOverlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+    document.querySelector('.legal-close').focus();
+  }
+
+  function closeLegal() {
+    document.getElementById('legalOverlay').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeLegal();
+  });
 </script>
 
 </body>
