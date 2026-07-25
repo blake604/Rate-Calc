@@ -888,7 +888,7 @@
     const statusEl = document.getElementById('statusMsg');
     const btn = document.getElementById('submitBtn');
     const zip = document.getElementById('zipInput').value;
-    const familyIncluded = document.getElementById('familyCheck').checked;
+    const contactInfoChecked = document.getElementById('familyCheck').checked;
 
     // Clear previous inline errors
     document.getElementById('consentError').classList.remove('show');
@@ -907,7 +907,7 @@
       return;
     }
 
-    if (familyIncluded) {
+    if (contactInfoChecked) {
       const phone = document.getElementById('famPhone').value.trim();
       const email = document.getElementById('famEmail').value.trim();
       let hasError = false;
@@ -946,6 +946,7 @@
     }
 
     const total = people.reduce(function(sum, p) { return sum + p.rate; }, 0);
+    const familyIncluded = people.length > 1;
 
     const payload = {
       timestamp: new Date().toISOString(),
@@ -957,10 +958,10 @@
       totalMonthlyPremium: total,
       consentToContact: 'Yes',
       familyIncluded: familyIncluded ? 'Yes' : 'No',
-      familyName: familyIncluded ? document.getElementById('famName').value : '',
-      familyPhone: familyIncluded ? document.getElementById('famPhone').value : '',
-      familyEmail: familyIncluded ? document.getElementById('famEmail').value : '',
-      familyBestTime: familyIncluded ? document.getElementById('famTime').value : ''
+      familyName: contactInfoChecked ? document.getElementById('famName').value : '',
+      familyPhone: contactInfoChecked ? document.getElementById('famPhone').value : '',
+      familyEmail: contactInfoChecked ? document.getElementById('famEmail').value : '',
+      familyBestTime: contactInfoChecked ? document.getElementById('famTime').value : ''
     };
 
     btn.disabled = true;
