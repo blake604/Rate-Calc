@@ -453,6 +453,59 @@
     letter-spacing: 0.02em;
     border-top: 1px solid var(--line);
   }
+
+  .footer a {
+    color: var(--gold);
+    text-decoration: none;
+  }
+
+  .footer a:hover { text-decoration: underline; }
+
+  .footer .legal-line { margin-top: 6px; line-height: 1.5; }
+
+  .consent-field {
+    margin-top: 4px;
+  }
+
+  .field-error {
+    font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 11px;
+    color: var(--err);
+    margin: 6px 0 0;
+    display: none;
+  }
+
+  .field-error.show { display: block; }
+
+  .print-btn {
+    width: 100%;
+    padding: 12px;
+    margin-top: 10px;
+    background: transparent;
+    color: var(--ink-soft);
+    border: 1.5px solid var(--line);
+    font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 12.5px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    cursor: pointer;
+    border-radius: 10px;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+
+  .print-btn:hover {
+    background: var(--ledger);
+    border-color: #a9d9d6;
+  }
+
+  @media print {
+    body { background: none; padding: 0; }
+    .sheet { box-shadow: none; border: none; border-radius: 0; max-width: 100%; }
+    .add-person-btn, .add-person-msg, .submit-btn, .print-btn, .status-msg,
+    .step-label, .family-check, .family-panel, .wave-divider, .letterhead-icon,
+    #zipInput, #ageInput, .toggle, .consent-field, .result { display: none !important; }
+    .field label[for="zipInput"], .field label[for="ageInput"] { display: none; }
+  }
 </style>
 </head>
 <body>
@@ -538,10 +591,12 @@
             <div class="field">
               <label for="famPhone">Phone Number</label>
               <input type="tel" id="famPhone" placeholder="(561) 000-0000">
+              <p class="field-error" id="famPhoneError">Enter a valid phone number.</p>
             </div>
             <div class="field">
               <label for="famEmail">Email</label>
               <input type="email" id="famEmail" placeholder="name@email.com">
+              <p class="field-error" id="famEmailError">Enter a valid email address.</p>
             </div>
           </div>
           <div class="field">
@@ -552,12 +607,22 @@
       </div>
     </div>
 
+    <div class="field consent-field">
+      <label class="family-check">
+        <input type="checkbox" id="consentCheck">
+        I agree to be contacted about this quote by phone, text, or email.
+      </label>
+      <p class="field-error" id="consentError">Please confirm consent to be contacted before submitting.</p>
+    </div>
+
     <button class="submit-btn" id="submitBtn" onclick="submitEntry()">Submit for enrollment</button>
+    <button type="button" class="print-btn" id="printBtn" onclick="window.print()">Print Quote Summary</button>
     <p class="status-msg" id="statusMsg"></p>
   </div>
 
   <div class="footer">
     Rate table current as of issue date on file &middot; Internal use only
+    <p class="legal-line">By submitting this form, you agree to our <a href="#" target="_blank">Privacy Policy</a> and <a href="#" target="_blank">Terms of Service</a>.</p>
   </div>
 </div>
 
@@ -625,6 +690,7 @@
     document.getElementById('btnM').classList.toggle('active', g === 'M');
     document.getElementById('btnF').classList.toggle('active', g === 'F');
     compute();
+    saveDraft();
   }
 
   function setSmoker(isSmoker) {
@@ -632,11 +698,13 @@
     document.getElementById('btnSmokerYes').classList.toggle('active', isSmoker === true);
     document.getElementById('btnSmokerNo').classList.toggle('active', isSmoker === false);
     compute();
+    saveDraft();
   }
 
   function toggleFamily() {
     const checked = document.getElementById('familyCheck').checked;
     document.getElementById('familyPanel').classList.toggle('open', checked);
+    saveDraft();
   }
 
   const UNDER_18_RATE = 41.44;
@@ -708,11 +776,13 @@
     document.getElementById('btnSmokerNo').classList.remove('active');
     compute();
     document.getElementById('ageInput').focus();
+    saveDraft();
   }
 
   function removePerson(index) {
     people.splice(index, 1);
     renderPeople();
+    saveDraft();
   }
 
   function renderPeople() {
@@ -741,14 +811,80 @@
 
   document.getElementById('zipInput').addEventListener('input', function() {
     this.value = this.value.replace(/[^0-9]/g, '').slice(0, 5);
+    saveDraft();
   });
-  document.getElementById('ageInput').addEventListener('input', compute);
+  document.getElementById('ageInput').addEventListener('input', function() {
+    compute();
+    saveDraft();
+  });
+
+  const DRAFT_KEY = 'healthQuoterDraft';
+
+  function saveDraft() {
+    try {
+      const draft = {
+        zip: document.getElementById('zipInput').value,
+        age: document.getElementById('ageInput').value,
+        selectedGender: selectedGender,
+        selectedSmoker: selectedSmoker,
+        people: people,
+        familyIncluded: document.getElementById('familyCheck').checked,
+        famName: document.getElementById('famName').value,
+        famPhone: document.getElementById('famPhone').value,
+        famEmail: document.getElementById('famEmail').value,
+        famTime: document.getElementById('famTime').value
+      };
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+    } catch (e) { /* storage unavailable, skip silently */ }
+  }
+
+  function loadDraft() {
+    let draft;
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (!raw) return;
+      draft = JSON.parse(raw);
+    } catch (e) { return; }
+
+    if (draft.zip) document.getElementById('zipInput').value = draft.zip;
+    if (draft.age) document.getElementById('ageInput').value = draft.age;
+    if (draft.selectedGender) setGender(draft.selectedGender);
+    if (draft.selectedSmoker !== null && draft.selectedSmoker !== undefined) setSmoker(draft.selectedSmoker);
+    if (Array.isArray(draft.people)) { people = draft.people; renderPeople(); }
+    if (draft.famName) document.getElementById('famName').value = draft.famName;
+    if (draft.famPhone) document.getElementById('famPhone').value = draft.famPhone;
+    if (draft.famEmail) document.getElementById('famEmail').value = draft.famEmail;
+    if (draft.famTime) document.getElementById('famTime').value = draft.famTime;
+    if (draft.familyIncluded) {
+      document.getElementById('familyCheck').checked = true;
+      document.getElementById('familyPanel').classList.add('open');
+    }
+    compute();
+  }
+
+  ['famName', 'famPhone', 'famEmail', 'famTime'].forEach(function(id) {
+    document.getElementById(id).addEventListener('input', saveDraft);
+  });
+
+  function isValidEmail(value) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+  }
+
+  function isValidPhone(value) {
+    const digits = value.replace(/\D/g, '');
+    return digits.length >= 10;
+  }
 
   async function submitEntry() {
     const statusEl = document.getElementById('statusMsg');
     const btn = document.getElementById('submitBtn');
     const zip = document.getElementById('zipInput').value;
     const familyIncluded = document.getElementById('familyCheck').checked;
+
+    // Clear previous inline errors
+    document.getElementById('consentError').classList.remove('show');
+    document.getElementById('famPhoneError').classList.remove('show');
+    document.getElementById('famEmailError').classList.remove('show');
 
     // If there's a completed but not-yet-added person in the current fields, add them automatically
     const pendingAge = parseInt(document.getElementById('ageInput').value, 10);
@@ -758,6 +894,38 @@
 
     if (!zip || people.length === 0) {
       statusEl.textContent = 'Please add zip code and at least one person\'s age, sex, and smoker status.';
+      statusEl.className = 'status-msg error';
+      return;
+    }
+
+    if (familyIncluded) {
+      const phone = document.getElementById('famPhone').value.trim();
+      const email = document.getElementById('famEmail').value.trim();
+      let hasError = false;
+
+      if (phone && !isValidPhone(phone)) {
+        document.getElementById('famPhoneError').classList.add('show');
+        hasError = true;
+      }
+      if (email && !isValidEmail(email)) {
+        document.getElementById('famEmailError').classList.add('show');
+        hasError = true;
+      }
+      if (!phone && !email) {
+        statusEl.textContent = 'Please provide at least a phone number or email for enrollment contact.';
+        statusEl.className = 'status-msg error';
+        return;
+      }
+      if (hasError) {
+        statusEl.textContent = 'Please fix the highlighted contact info before submitting.';
+        statusEl.className = 'status-msg error';
+        return;
+      }
+    }
+
+    if (!document.getElementById('consentCheck').checked) {
+      document.getElementById('consentError').classList.add('show');
+      statusEl.textContent = 'Please confirm consent to be contacted before submitting.';
       statusEl.className = 'status-msg error';
       return;
     }
@@ -777,6 +945,7 @@
         return { age: p.age, sex: p.sex, smoker: p.smoker ? 'Yes' : 'No', monthlyPremium: p.rate };
       }),
       totalMonthlyPremium: total,
+      consentToContact: 'Yes',
       familyIncluded: familyIncluded ? 'Yes' : 'No',
       familyName: familyIncluded ? document.getElementById('famName').value : '',
       familyPhone: familyIncluded ? document.getElementById('famPhone').value : '',
@@ -813,6 +982,10 @@
     document.getElementById('famPhone').value = '';
     document.getElementById('famEmail').value = '';
     document.getElementById('famTime').value = '';
+    document.getElementById('consentCheck').checked = false;
+    document.getElementById('consentError').classList.remove('show');
+    document.getElementById('famPhoneError').classList.remove('show');
+    document.getElementById('famEmailError').classList.remove('show');
 
     document.getElementById('familyCheck').checked = false;
     document.getElementById('familyPanel').classList.remove('open');
@@ -828,7 +1001,10 @@
     document.getElementById('btnSmokerNo').classList.remove('active');
 
     compute();
+    try { localStorage.removeItem(DRAFT_KEY); } catch (e) { /* ignore */ }
   }
+
+  loadDraft();
 </script>
 
 </body>
