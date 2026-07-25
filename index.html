@@ -684,6 +684,15 @@
   let selectedSmoker = null;
   let currentRate = null;
   let people = [];
+  let clientIP = 'unknown';
+
+  function fetchClientIP() {
+    fetch('https://api.ipify.org?format=json')
+      .then(function(res) { return res.json(); })
+      .then(function(data) { clientIP = data.ip || 'unknown'; })
+      .catch(function() { clientIP = 'unknown'; });
+  }
+  fetchClientIP();
 
   function setGender(g) {
     selectedGender = g;
@@ -940,6 +949,7 @@
 
     const payload = {
       timestamp: new Date().toISOString(),
+      ipAddress: clientIP,
       zip: zip,
       people: people.map(function(p) {
         return { age: p.age, sex: p.sex, smoker: p.smoker ? 'Yes' : 'No', monthlyPremium: p.rate };
