@@ -866,7 +866,6 @@
               <p class="field-error" id="famEmailError">Enter a valid email address.</p>
             </div>
           </div>
-          <p class="field-error" id="contactRequiredError">Enter at least a phone number or email address.</p>
           <div class="field">
             <label for="famTime">Best Time to Contact</label>
             <input type="text" id="famTime" placeholder="e.g. Weekday mornings">
@@ -1001,6 +1000,28 @@
     const checked = document.getElementById('familyCheck').checked;
     document.getElementById('familyPanel').classList.toggle('open', checked);
     saveDraft();
+  }
+
+  function openContactPanel(focusField) {
+    const familyCheck = document.getElementById('familyCheck');
+    const familyPanel = document.getElementById('familyPanel');
+
+    familyCheck.checked = true;
+    familyPanel.classList.add('open');
+    saveDraft();
+
+    // Keep this compatible with embedded pages and older browsers.
+    try {
+      familyPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } catch (error) {
+      familyPanel.scrollIntoView();
+    }
+
+    if (focusField) {
+      window.setTimeout(function() {
+        focusField.focus();
+      }, 350);
+    }
   }
 
   const CONSENT_DISCLOSURE_TEXT = "By checking this box, I agree that [Blake Moree] (NPN 21495656) may contact me at the phone number provided by call, text, or email — to discuss this health insurance quote. Message and data rates may apply. Message frequency varies. Consent is not required to receive a quote. Reply STOP to any text to opt out at any time, or contact us directly to be removed from our contact list.";
@@ -1250,72 +1271,75 @@
   async function submitEntry() {
     const statusEl = document.getElementById('statusMsg');
     const btn = document.getElementById('submitBtn');
-    const zip = document.getElementById('zipInput').value;
-    const familyCheck = document.getElementById('familyCheck');
-    const familyPanel = document.getElementById('familyPanel');
+    const zip = document.getElementById('zipInput').value.trim();
     const phoneInput = document.getElementById('famPhone');
     const emailInput = document.getElementById('famEmail');
-    const phone = phoneInput.value.trim();
-    const email = emailInput.value.trim();
+    const phoneError = document.getElementById('famPhoneError');
+    const emailError = document.getElementById('famEmailError');
 
-    // Clear previous inline errors
+    // Clear previous inline errors and restore their normal messages.
     document.getElementById('consentError').classList.remove('show');
-    document.getElementById('famPhoneError').classList.remove('show');
-    document.getElementById('famEmailError').classList.remove('show');
-    document.getElementById('contactRequiredError').classList.remove('show');
+    phoneError.classList.remove('show');
+    emailError.classList.remove('show');
+    phoneError.textContent = 'Enter a valid phone number.';
+    emailError.textContent = 'Enter a valid email address.';
 
-    // If there's a completed but not-yet-added person in the current fields, add them automatically
+    // If there is a completed person still in the entry fields, add that person automatically.
     const pendingAge = parseInt(document.getElementById('ageInput').value, 10);
-    if (currentRate && selectedGender && selectedSmoker !== null && !isNaN(pendingAge) && pendingAge >= 0 && pendingAge <= 64) {
+    if (
+      currentRate &&
+      selectedGender &&
+      selectedSmoker !== null &&
+      !isNaN(pendingAge) &&
+      pendingAge >= 0 &&
+      pendingAge <= 64
+    ) {
       addPerson();
     }
 
     if (!zip || people.length === 0) {
-      statusEl.textContent = 'Please add zip code and at least one person\'s age, sex, and smoker status.';
+      statusEl.textContent = "Please add a zip code and at least one person's age, sex, and smoker status.";
       statusEl.className = 'status-msg error';
       return;
     }
 
-    // A valid phone number or email address is always required.
-    // The contact panel remains collapsed until selected or until submission needs it.
-    if (!phone && !email) {
-      familyCheck.checked = true;
-      familyPanel.classList.add('open');
-      document.getElementById('contactRequiredError').classList.add('show');
-      statusEl.textContent = 'Please provide a phone number or email address before requesting your quote.';
-      statusEl.className = 'status-msg error';
-      saveDraft();
+    // Read these values at submission time. At least one is required,
+    // even when the optional-looking contact panel began collapsed.
+    const phone = phoneInput.value.trim();
+    const email = emailInput.value.trim();
 
-      familyPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      window.setTimeout(function() { phoneInput.focus(); }, 350);
+    if (!phone && !email) {
+      phoneError.textContent = 'Enter a phone number or provide an email address.';
+      emailError.textContent = 'Enter an email address or provide a phone number.';
+      phoneError.classList.add('show');
+      emailError.classList.add('show');
+      statusEl.textContent = 'A phone number or email address is required to request your quote.';
+      statusEl.className = 'status-msg error';
+      openContactPanel(phoneInput);
       return;
     }
 
     let hasContactError = false;
 
     if (phone && !isValidPhone(phone)) {
-      document.getElementById('famPhoneError').classList.add('show');
+      phoneError.classList.add('show');
       hasContactError = true;
     }
 
     if (email && !isValidEmail(email)) {
-      document.getElementById('famEmailError').classList.add('show');
+      emailError.classList.add('show');
       hasContactError = true;
     }
 
     if (hasContactError) {
-      familyCheck.checked = true;
-      familyPanel.classList.add('open');
       statusEl.textContent = 'Please fix the highlighted contact information before submitting.';
       statusEl.className = 'status-msg error';
-      saveDraft();
-      familyPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      openContactPanel(phone && !isValidPhone(phone) ? phoneInput : emailInput);
       return;
     }
 
-    // Keep the contact section selected once valid contact information is supplied.
-    familyCheck.checked = true;
-    familyPanel.classList.add('open');
+    // Keep the contact section selected after valid contact information is supplied.
+    openContactPanel(null);
 
     if (!document.getElementById('consentCheck').checked) {
       document.getElementById('consentError').classList.add('show');
@@ -1325,7 +1349,7 @@
     }
 
     if (SHEET_ENDPOINT_URL.includes('PASTE_YOUR')) {
-      statusEl.textContent = 'This form isn\'t connected to a Google Sheet yet. See setup instructions.';
+      statusEl.textContent = "This form isn't connected to a Google Sheet yet. See setup instructions.";
       statusEl.className = 'status-msg error';
       return;
     }
@@ -1338,7 +1362,12 @@
       ipAddress: clientIP,
       zip: zip,
       people: people.map(function(p) {
-        return { age: p.age, sex: p.sex, smoker: p.smoker ? 'Yes' : 'No', monthlyPremium: p.rate };
+        return {
+          age: p.age,
+          sex: p.sex,
+          smoker: p.smoker ? 'Yes' : 'No',
+          monthlyPremium: p.rate
+        };
       }),
       totalMonthlyPremium: total,
       consentToContact: 'Yes',
@@ -1386,7 +1415,6 @@
     document.getElementById('consentError').classList.remove('show');
     document.getElementById('famPhoneError').classList.remove('show');
     document.getElementById('famEmailError').classList.remove('show');
-    document.getElementById('contactRequiredError').classList.remove('show');
 
     document.getElementById('familyCheck').checked = false;
     document.getElementById('familyPanel').classList.remove('open');
