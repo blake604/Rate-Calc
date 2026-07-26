@@ -599,6 +599,102 @@
   .status-msg.success { color: var(--good); }
   .status-msg.error { color: var(--err); }
 
+
+  /* ---------- Post-submission follow-up message ---------- */
+  .success-followup {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 28px;
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+    background: rgba(10, 13, 43, 0);
+    backdrop-filter: blur(0);
+    -webkit-backdrop-filter: blur(0);
+    transition:
+      opacity 0.7s ease,
+      background 0.7s ease,
+      backdrop-filter 0.7s ease,
+      visibility 0s linear 0.7s;
+  }
+
+  .success-followup.show {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+    background: rgba(10, 13, 43, 0.88);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    transition-delay: 0s;
+  }
+
+  .success-followup.closing {
+    opacity: 0;
+    background: rgba(10, 13, 43, 0);
+    backdrop-filter: blur(0);
+    -webkit-backdrop-filter: blur(0);
+    pointer-events: none;
+  }
+
+  .success-followup-message {
+    width: min(760px, 100%);
+    margin: 0;
+    color: #ffffff;
+    text-align: center;
+    font-family: 'DM Serif Display', Georgia, serif;
+    font-size: clamp(30px, 6vw, 58px);
+    font-weight: 400;
+    line-height: 1.16;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+    filter: drop-shadow(0 12px 30px rgba(0, 0, 0, 0.28));
+  }
+
+  .success-followup-message::before {
+    content: '';
+    display: block;
+    width: 76px;
+    height: 6px;
+    margin: 0 auto 24px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #ff5d57, #ffad8f, #5b6cff);
+    opacity: 0;
+    transform: scaleX(0.2);
+  }
+
+  .success-followup.show .success-followup-message::before {
+    animation: followupLineIn 0.65s cubic-bezier(0.16, 1, 0.3, 1) 0.25s forwards;
+  }
+
+  .success-followup-word {
+    display: inline-block;
+    margin-right: 0.19em;
+    opacity: 0;
+    transform: translateY(28px) scale(0.92);
+    filter: blur(7px);
+  }
+
+  .success-followup.show .success-followup-word {
+    animation: followupWordIn 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation-delay: calc(0.42s + (var(--word-index) * 0.075s));
+  }
+
+  @keyframes followupLineIn {
+    to { opacity: 1; transform: scaleX(1); }
+  }
+
+  @keyframes followupWordIn {
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      filter: blur(0);
+    }
+  }
+
   .footer {
     padding: 18px 36px 25px;
     color: var(--ink-soft);
@@ -900,6 +996,10 @@
   </div>
 
   </div><!-- /.reveal.intro -->
+</div>
+
+<div class="success-followup" id="successFollowup" role="status" aria-live="polite" aria-hidden="true" onclick="hideFollowupMessage()">
+  <p class="success-followup-message" id="successFollowupMessage"></p>
 </div>
 
 <div class="legal-overlay" id="legalOverlay" onclick="if (event.target === this) closeLegal();">
@@ -1220,6 +1320,9 @@
     const colors = ['#151a4f', '#3046c5', '#5b6cff', '#ff5d57', '#ffad8f', '#fff4df', '#ffffff'];
     const particles = [];
     const count = 140;
+    const duration = 3000;
+    let finished = false;
+    let startTime = null;
 
     for (let i = 0; i < count; i++) {
       particles.push({
@@ -1235,10 +1338,17 @@
       });
     }
 
-    let frame = 0;
-    const maxFrames = 200;
+    function finishConfetti() {
+      if (finished) return;
+      finished = true;
+      if (canvas.isConnected) canvas.remove();
+      showFollowupMessage();
+    }
 
-    function draw() {
+    function draw(timestamp) {
+      if (finished) return;
+      if (startTime === null) startTime = timestamp;
+
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       particles.forEach(function(p) {
         p.x += p.vx;
@@ -1258,14 +1368,78 @@
         }
         ctx.restore();
       });
-      frame++;
-      if (frame < maxFrames) {
+
+      if (timestamp - startTime < duration) {
         requestAnimationFrame(draw);
       } else {
-        canvas.remove();
+        finishConfetti();
       }
     }
-    draw();
+
+    requestAnimationFrame(draw);
+
+    // Fallback for browsers that pause or heavily throttle animation frames.
+    setTimeout(finishConfetti, duration + 450);
+  }
+
+  let followupHideTimer = null;
+  let followupCleanupTimer = null;
+
+  function showFollowupMessage() {
+    const overlay = document.getElementById('successFollowup');
+    const message = document.getElementById('successFollowupMessage');
+    const sentence = 'An agent will reach out to you according to your requested contact time';
+
+    if (!overlay || !message) return;
+
+    clearTimeout(followupHideTimer);
+    clearTimeout(followupCleanupTimer);
+
+    message.innerHTML = sentence.split(' ').map(function(word, index) {
+      return '<span class="success-followup-word" style="--word-index:' + index + '">' + word + '</span>';
+    }).join(' ');
+
+    overlay.classList.remove('closing', 'show');
+    overlay.setAttribute('aria-hidden', 'false');
+
+    // Apply visible styles directly as well as through the CSS class. This
+    // guarantees the page darkens even if a browser delays a stylesheet update.
+    overlay.style.visibility = 'visible';
+    overlay.style.opacity = '0';
+    overlay.style.pointerEvents = 'auto';
+    overlay.style.backgroundColor = 'rgba(10, 13, 43, 0)';
+    overlay.style.backdropFilter = 'blur(0px)';
+    overlay.style.webkitBackdropFilter = 'blur(0px)';
+
+    void overlay.offsetWidth;
+
+    overlay.classList.add('show');
+    overlay.style.opacity = '1';
+    overlay.style.backgroundColor = 'rgba(10, 13, 43, 0.92)';
+    overlay.style.backdropFilter = 'blur(7px)';
+    overlay.style.webkitBackdropFilter = 'blur(7px)';
+
+    followupHideTimer = setTimeout(hideFollowupMessage, 6500);
+  }
+
+  function hideFollowupMessage() {
+    const overlay = document.getElementById('successFollowup');
+    if (!overlay || overlay.getAttribute('aria-hidden') === 'true') return;
+
+    clearTimeout(followupHideTimer);
+    clearTimeout(followupCleanupTimer);
+    overlay.classList.add('closing');
+    overlay.setAttribute('aria-hidden', 'true');
+    overlay.style.opacity = '0';
+    overlay.style.backgroundColor = 'rgba(10, 13, 43, 0)';
+    overlay.style.backdropFilter = 'blur(0px)';
+    overlay.style.webkitBackdropFilter = 'blur(0px)';
+    overlay.style.pointerEvents = 'none';
+
+    followupCleanupTimer = setTimeout(function() {
+      overlay.classList.remove('show', 'closing');
+      overlay.style.visibility = 'hidden';
+    }, 750);
   }
 
   async function submitEntry() {
@@ -1393,8 +1567,8 @@
       });
       statusEl.textContent = 'Sent.';
       statusEl.className = 'status-msg success';
-      launchConfetti();
       resetForm();
+      launchConfetti();
     } catch (err) {
       statusEl.textContent = 'Could not save. Check your connection and try again.';
       statusEl.className = 'status-msg error';
