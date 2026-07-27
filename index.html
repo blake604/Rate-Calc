@@ -171,6 +171,11 @@
     animation: popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   }
 
+  .letterhead h1 .w:nth-child(1) { animation-delay: 0.88s; }
+  .letterhead h1 .w:nth-child(2) { animation-delay: 1s; }
+  .letterhead h1 .w:nth-child(3) { animation-delay: 1.12s; }
+  .letterhead h1 .w:nth-child(4) { animation-delay: 1.24s; }
+
   .letterhead p {
     position: relative;
     z-index: 1;
@@ -553,8 +558,6 @@
 
   .consent-label input { margin-top: 2px; }
   .consent-label strong { color: var(--ink); }
-  #consentPhoneDisplay { color: var(--navy); font-weight: 800; }
-
   .field-error {
     display: none;
     margin: 7px 0 0;
@@ -872,7 +875,7 @@
       <path d="M4 40c4 0 4-6 8-6s4 6 8 6 4-6 8-6 4 6 8 6 4-6 8-6" stroke="#ffad8f" stroke-width="2" stroke-linecap="round" opacity="0.35"/>
     </svg>
     <p class="eyebrow">Simple Monthly Estimate</p>
-    <h1><span class="w" style="animation-delay:.88s">Your</span> <span class="w" style="animation-delay:1.00s">Health</span> <span class="w" style="animation-delay:1.12s">Coverage</span> <span class="w" style="animation-delay:1.24s">Estimate</span></h1>
+    <h1><span class="w">Your</span> <span class="w">Health</span> <span class="w">Coverage</span> <span class="w">Estimate</span></h1>
     <p class="sub">See an estimated monthly premium in just a few simple steps. Available for ages 0&ndash;64.</p>
   </div>
 
@@ -895,8 +898,9 @@
     </div>
 
     <div class="field">
-      <label for="zipInput">Zip Code</label>
-      <input type="text" id="zipInput" maxlength="10" placeholder="e.g. 34981" inputmode="numeric" oninput="compute()">
+      <label for="zipInput">ZIP Code</label>
+      <input type="text" id="zipInput" maxlength="5" pattern="[0-9]{5}" placeholder="e.g. 34981" inputmode="numeric" autocomplete="postal-code" aria-describedby="zipError">
+      <p class="field-error" id="zipError">Enter a valid 5-digit ZIP code.</p>
     </div>
 
     <div class="field">
@@ -907,16 +911,16 @@
     <div class="field">
       <label>Sex</label>
       <div class="toggle">
-        <button type="button" id="btnM" onclick="setGender('M')">Male</button>
-        <button type="button" id="btnF" onclick="setGender('F')">Female</button>
+        <button type="button" id="btnM" aria-pressed="false" onclick="setGender('M')">Male</button>
+        <button type="button" id="btnF" aria-pressed="false" onclick="setGender('F')">Female</button>
       </div>
     </div>
 
     <div class="field">
       <label>Smoker</label>
       <div class="toggle">
-        <button type="button" id="btnSmokerYes" onclick="setSmoker(true)">Yes</button>
-        <button type="button" id="btnSmokerNo" onclick="setSmoker(false)">No</button>
+        <button type="button" id="btnSmokerYes" aria-pressed="false" onclick="setSmoker(true)">Yes</button>
+        <button type="button" id="btnSmokerNo" aria-pressed="false" onclick="setSmoker(false)">No</button>
       </div>
     </div>
 
@@ -942,7 +946,7 @@
     <div class="field">
       <label class="family-check">
         <input type="checkbox" id="familyCheck" onchange="toggleFamily()">
-        Add contact info for enrollment
+        Add contact information for enrollment help (required to submit)
       </label>
 
       <div class="family-panel" id="familyPanel">
@@ -979,7 +983,7 @@
       <p class="field-error" id="consentError">Please confirm consent to be contacted before submitting.</p>
     </div>
 
-    <button class="submit-btn" id="submitBtn" onclick="submitEntry()">Request My Quote</button>
+    <button type="button" class="submit-btn" id="submitBtn" onclick="submitEntry()">Request My Quote</button>
     <button type="button" class="print-btn" id="printBtn" onclick="window.print()">Print Quote Summary</button>
     <p class="status-msg" id="statusMsg"></p>
   </div>
@@ -1118,16 +1122,16 @@
 
   function buildConsentHTML() {
     return 'By checking this box, I agree that <strong>' + buildAgentClause() + '</strong> may contact me ' +
-      'at <span id="consentPhoneDisplay">the phone number provided above</span> by call, text, or email — ' +
+      'using the phone number and/or email address I provide, by call, text, or email — ' +
       'to discuss this health insurance quote. Message and data rates may apply. Message frequency varies. ' +
-      '<strong>Consent is not required to receive a quote.</strong> ' +
+      '<strong>Consent is not a condition of purchase or use of this estimate.</strong> ' +
       'Reply STOP to any text to opt out at any time, or contact us directly to be removed from our contact list.';
   }
 
   function buildConsentPlainText() {
     return 'By checking this box, I agree that ' + buildAgentClause() + ' may contact me ' +
-      'at the phone number provided by call, text, or email — to discuss this health insurance quote. ' +
-      'Message and data rates may apply. Message frequency varies. Consent is not required to receive a quote. ' +
+      'using the phone number and/or email address I provide, by call, text, or email — to discuss this health insurance quote. ' +
+      'Message and data rates may apply. Message frequency varies. Consent is not a condition of purchase or use of this estimate. ' +
       'Reply STOP to any text to opt out at any time, or contact us directly to be removed from our contact list.';
   }
 
@@ -1153,8 +1157,13 @@
    ========================================================================= */
   function fetchClientIP() {
     fetch('https://api.ipify.org?format=json')
-      .then(function(res) { return res.json(); })
-      .then(function(data) { clientIP = data.ip || 'unknown'; })
+      .then(function(res) {
+        if (!res.ok) throw new Error('IP lookup failed');
+        return res.json();
+      })
+      .then(function(data) {
+        clientIP = data && typeof data.ip === 'string' ? data.ip : 'unknown';
+      })
       .catch(function() { clientIP = 'unknown'; });
   }
   fetchClientIP();
@@ -1164,16 +1173,24 @@
    ========================================================================= */
   function setGender(g) {
     selectedGender = g;
-    document.getElementById('btnM').classList.toggle('active', g === 'M');
-    document.getElementById('btnF').classList.toggle('active', g === 'F');
+    const maleSelected = g === 'M';
+    const femaleSelected = g === 'F';
+    document.getElementById('btnM').classList.toggle('active', maleSelected);
+    document.getElementById('btnF').classList.toggle('active', femaleSelected);
+    document.getElementById('btnM').setAttribute('aria-pressed', String(maleSelected));
+    document.getElementById('btnF').setAttribute('aria-pressed', String(femaleSelected));
     compute();
     saveDraft();
   }
 
   function setSmoker(isSmoker) {
     selectedSmoker = isSmoker;
-    document.getElementById('btnSmokerYes').classList.toggle('active', isSmoker === true);
-    document.getElementById('btnSmokerNo').classList.toggle('active', isSmoker === false);
+    const smokerSelected = isSmoker === true;
+    const nonSmokerSelected = isSmoker === false;
+    document.getElementById('btnSmokerYes').classList.toggle('active', smokerSelected);
+    document.getElementById('btnSmokerNo').classList.toggle('active', nonSmokerSelected);
+    document.getElementById('btnSmokerYes').setAttribute('aria-pressed', String(smokerSelected));
+    document.getElementById('btnSmokerNo').setAttribute('aria-pressed', String(nonSmokerSelected));
     compute();
     saveDraft();
   }
@@ -1207,14 +1224,26 @@
   }
 
   function isAgeInRange(age) {
-    return !isNaN(age) && age >= CONFIG.minAge && age <= CONFIG.maxAge;
+    return Number.isInteger(age) && age >= CONFIG.minAge && age <= CONFIG.maxAge;
+  }
+
+  function getRate(age, gender, smoker) {
+    if (!isAgeInRange(age) || !['M', 'F'].includes(gender) || typeof smoker !== 'boolean') {
+      return null;
+    }
+
+    if (age < 18) return CONFIG.underAgeRate;
+
+    const ageRates = rates[age];
+    if (!ageRates || !ageRates[gender]) return null;
+    return smoker ? ageRates[gender].s : ageRates[gender].n;
   }
 
   function compute() {
     const ageInput = document.getElementById('ageInput').value;
     const amountEl = document.getElementById('amountDisplay');
     const noteEl = document.getElementById('resultNote');
-    const age = parseInt(ageInput, 10);
+    const age = Number(ageInput);
 
     if (!ageInput || !selectedGender || selectedSmoker === null) {
       amountEl.textContent = 'Enter age, sex & smoker status';
@@ -1224,7 +1253,7 @@
       return;
     }
 
-    if (isNaN(age) || age < CONFIG.minAge) {
+    if (!Number.isInteger(age) || age < CONFIG.minAge) {
       amountEl.textContent = 'Enter age, sex & smoker status';
       amountEl.classList.add('empty');
       currentRate = null;
@@ -1248,7 +1277,15 @@
       return;
     }
 
-    const rate = selectedSmoker ? rates[age][selectedGender].s : rates[age][selectedGender].n;
+    const rate = getRate(age, selectedGender, selectedSmoker);
+    if (rate === null) {
+      amountEl.textContent = 'Rate unavailable';
+      amountEl.classList.add('empty');
+      currentRate = null;
+      noteEl.textContent = 'A rate is not available for this selection. Contact underwriting directly: ' + CONFIG.underwritingPhone + '.';
+      return;
+    }
+
     currentRate = rate;
     amountEl.textContent = '$' + rate.toFixed(2);
     amountEl.classList.remove('empty');
@@ -1260,7 +1297,7 @@
    ========================================================================= */
   function addPerson() {
     const msgEl = document.getElementById('addPersonMsg');
-    const age = parseInt(document.getElementById('ageInput').value, 10);
+    const age = Number(document.getElementById('ageInput').value);
 
     if (!currentRate || !selectedGender || selectedSmoker === null || !isAgeInRange(age)) {
       msgEl.textContent = 'Complete a valid age, sex, and smoker status before adding.';
@@ -1368,12 +1405,19 @@
     if (draft.age) document.getElementById('ageInput').value = draft.age;
     if (draft.selectedGender) setGender(draft.selectedGender);
     if (draft.selectedSmoker !== null && draft.selectedSmoker !== undefined) setSmoker(draft.selectedSmoker);
-    if (Array.isArray(draft.people)) { people = draft.people; renderPeople(); }
-    if (draft.famName) document.getElementById('famName').value = draft.famName;
-    if (draft.famPhone) {
-      document.getElementById('famPhone').value = draft.famPhone;
-      document.getElementById('consentPhoneDisplay').textContent = draft.famPhone;
+    if (Array.isArray(draft.people)) {
+      people = draft.people.reduce(function(validPeople, person) {
+        const age = Number(person && person.age);
+        const sex = person && person.sex;
+        const smoker = person && person.smoker;
+        const rate = getRate(age, sex, smoker);
+        if (rate !== null) validPeople.push({ age: age, sex: sex, smoker: smoker, rate: rate });
+        return validPeople;
+      }, []);
+      renderPeople();
     }
+    if (draft.famName) document.getElementById('famName').value = draft.famName;
+    if (draft.famPhone) document.getElementById('famPhone').value = draft.famPhone;
     if (draft.famEmail) document.getElementById('famEmail').value = draft.famEmail;
     if (draft.famTime) document.getElementById('famTime').value = draft.famTime;
     if (draft.familyIncluded) {
@@ -1385,12 +1429,6 @@
 
   ['famName', 'famPhone', 'famEmail', 'famTime'].forEach(function(id) {
     document.getElementById(id).addEventListener('input', saveDraft);
-  });
-
-  document.getElementById('famPhone').addEventListener('input', function() {
-    const display = document.getElementById('consentPhoneDisplay');
-    const val = this.value.trim();
-    display.textContent = val ? val : 'the phone number provided above';
   });
 
 /* =========================================================================
@@ -1421,6 +1459,11 @@
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
     const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      canvas.remove();
+      showFollowupMessage();
+      return;
+    }
 
     const colors = ['#151a4f', '#3046c5', '#5b6cff', '#ff5d57', '#ffad8f', '#fff4df', '#ffffff'];
     const particles = [];
@@ -1559,6 +1602,7 @@
     const zip = document.getElementById('zipInput').value.trim();
     const phoneInput = document.getElementById('famPhone');
     const emailInput = document.getElementById('famEmail');
+    const zipError = document.getElementById('zipError');
     const phoneError = document.getElementById('famPhoneError');
     const emailError = document.getElementById('famEmailError');
 
@@ -1575,19 +1619,28 @@
 
     // Clear previous inline errors and restore their normal messages.
     document.getElementById('consentError').classList.remove('show');
+    zipError.classList.remove('show');
     phoneError.classList.remove('show');
     emailError.classList.remove('show');
     phoneError.textContent = 'Enter a valid phone number.';
     emailError.textContent = 'Enter a valid email address.';
 
     // If there is a completed person still in the entry fields, add that person automatically.
-    const pendingAge = parseInt(document.getElementById('ageInput').value, 10);
+    const pendingAge = Number(document.getElementById('ageInput').value);
     if (currentRate && selectedGender && selectedSmoker !== null && isAgeInRange(pendingAge)) {
       addPerson();
     }
 
-    if (!zip || people.length === 0) {
-      statusEl.textContent = "Please add a zip code and at least one person's age, sex, and smoker status.";
+    if (!/^\d{5}$/.test(zip)) {
+      zipError.classList.add('show');
+      statusEl.textContent = 'Please enter a valid 5-digit ZIP code.';
+      statusEl.className = 'status-msg error';
+      document.getElementById('zipInput').focus();
+      return;
+    }
+
+    if (people.length === 0) {
+      statusEl.textContent = "Please add at least one person's age, sex, and smoker status.";
       statusEl.className = 'status-msg error';
       return;
     }
@@ -1643,11 +1696,12 @@
       return;
     }
 
-    const total = people.reduce(function(sum, p) { return sum + p.rate; }, 0);
+    const total = Number(people.reduce(function(sum, p) { return sum + p.rate; }, 0).toFixed(2));
     const familyIncluded = people.length > 1;
 
     const payload = {
       formToken: CONFIG.formToken,
+      submissionId: createSubmissionId(),
       timestamp: new Date().toISOString(),
       ipAddress: clientIP,
       zip: zip,
@@ -1695,6 +1749,13 @@
     btn.disabled = false;
   }
 
+  function createSubmissionId() {
+    if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+      return window.crypto.randomUUID();
+    }
+    return 'quote-' + Date.now() + '-' + Math.random().toString(16).slice(2);
+  }
+
   // The Worker returns real CORS headers, so unlike the old Apps Script
   // setup, this can actually read whether the submission succeeded and
   // why it failed (network error vs. the server deliberately rejecting
@@ -1739,7 +1800,8 @@
   function queuePendingSubmission(payload) {
     try {
       const raw = localStorage.getItem(PENDING_KEY);
-      const queue = raw ? JSON.parse(raw) : [];
+      const savedQueue = raw ? JSON.parse(raw) : [];
+      const queue = Array.isArray(savedQueue) ? savedQueue : [];
       queue.push(payload);
       localStorage.setItem(PENDING_KEY, JSON.stringify(queue));
     } catch (e) { /* storage unavailable; the submission is lost, nothing more we can do client-side */ }
@@ -1783,9 +1845,9 @@
     document.getElementById('famPhone').value = '';
     document.getElementById('famEmail').value = '';
     document.getElementById('famTime').value = '';
-    document.getElementById('consentPhoneDisplay').textContent = 'the phone number provided above';
     document.getElementById('consentCheck').checked = false;
     document.getElementById('consentError').classList.remove('show');
+    document.getElementById('zipError').classList.remove('show');
     document.getElementById('famPhoneError').classList.remove('show');
     document.getElementById('famEmailError').classList.remove('show');
 
@@ -1801,6 +1863,10 @@
     document.getElementById('btnF').classList.remove('active');
     document.getElementById('btnSmokerYes').classList.remove('active');
     document.getElementById('btnSmokerNo').classList.remove('active');
+    document.getElementById('btnM').setAttribute('aria-pressed', 'false');
+    document.getElementById('btnF').setAttribute('aria-pressed', 'false');
+    document.getElementById('btnSmokerYes').setAttribute('aria-pressed', 'false');
+    document.getElementById('btnSmokerNo').setAttribute('aria-pressed', 'false');
 
     compute();
     clearTimeout(saveDraftTimer);
@@ -1828,69 +1894,62 @@
     privacy: {
       title: 'Privacy Policy',
       html: `
-        <p class="updated">Last updated: 05/11/2026</p>
+        <p class="updated">Last updated: 07/27/2026</p>
 
-        <p>Blake Moree &amp; Anthony Benedict ("we," "us," or "our") is committed to protecting the privacy and security of your personal information, including that of your children. This Privacy Policy outlines our practices concerning the collection, use, and protection of the information we collect from users of our website. By accessing or using our website, floridacurrentinsurance.com, you consent to the practices described in this Privacy Policy.</p>
+        <p>Blake Moree and Anthony Benedict ("we," "us," or "our") are committed to protecting the personal information submitted through this health coverage estimate form. This Privacy Policy explains what this form collects, how that information is used, and the choices available to you.</p>
 
         <h3>1. Information We Collect</h3>
-        <p>We may collect the following personal information from users of our website, privatehealthquoter.com</p>
+        <p>We may collect the information you enter or submit through this form, including:</p>
         <ul>
-          <li>Full names</li>
-          <li>Phone numbers</li>
-          <li>Social Security numbers</li>
-          <li>Date of birth</li>
-          <li>Addresses</li>
-          <li>Banking Information</li>
-          <li>Children's personal information, including names, dates of birth, and relevant health information, if provided for inclusion in health insurance plans.</li>
+          <li>Name, phone number, email address, and preferred contact time.</li>
+          <li>ZIP code and the age, sex, and tobacco-use status entered for each quoted household member.</li>
+          <li>The estimated premium calculated by the form.</li>
+          <li>Your consent selection and the disclosure displayed when you submitted the form.</li>
+          <li>Limited technical information used for security and recordkeeping, such as IP address and submission time.</li>
         </ul>
-        <p>We collect this information in order to provide you with information and services related to health insurance, including the necessary information to include your children on health insurance plans.</p>
+        <p>This estimate form does not request Social Security numbers, banking information, full street addresses, or medical records. Do not enter sensitive information that the form does not request.</p>
 
         <h3>2. How We Use Your Information</h3>
         <p>We use the collected information for the following purposes:</p>
         <ul>
-          <li>To provide information and services related to health insurance.</li>
-          <li>To verify your identity.</li>
-          <li>To communicate with you regarding your requests.</li>
-          <li>To improve our website and services.</li>
-          <li>To include your children on health insurance plans, if applicable.</li>
-          <li>To comply with legal and regulatory requirements.</li>
+          <li>To calculate and provide the requested estimate.</li>
+          <li>To respond to your request for health insurance information or enrollment help.</li>
+          <li>To maintain consent, security, and submission records.</li>
+          <li>To improve the form and comply with applicable legal or regulatory obligations.</li>
         </ul>
 
         <h3>3. Disclosure of Your Information</h3>
-        <p>We may share your information, including your children's information, with the following third parties:</p>
+        <p>We may share relevant information with:</p>
         <ul>
-          <li>Insurance providers and agents for the purpose of assisting you in obtaining health insurance, including coverage for your children.</li>
-          <li>Regulatory authorities and law enforcement agencies to comply with legal obligations.</li>
-          <li>Service providers who assist us in running our website and services.</li>
+          <li>Insurance agents or providers involved in responding to your request.</li>
+          <li>Service providers that host, secure, or process this form and its submissions.</li>
+          <li>Regulators, courts, or law enforcement when disclosure is legally required.</li>
         </ul>
 
         <h3>4. Your Choices</h3>
-        <p>You have the following choices concerning your personal information and your children's information:</p>
+        <p>You may:</p>
         <ul>
-          <li>You can request access to your personal information.</li>
-          <li>You can request corrections to inaccurate or incomplete information.</li>
-          <li>You can request the inclusion or removal of your children from health insurance plans.</li>
-          <li>You can opt out of receiving promotional and marketing materials.</li>
-          <li>You can request your information to not be sold to third parties, if applicable.</li>
+          <li>Request access to or correction of the personal information associated with your submission.</li>
+          <li>Opt out of future marketing communications.</li>
+          <li>Reply STOP to text messages to opt out of texts.</li>
+          <li>Ask us to delete information when applicable law permits.</li>
         </ul>
         <p>Please note that certain information may be retained for legal and regulatory purposes.</p>
 
         <h3>5. Security</h3>
-        <p>We take reasonable steps to protect the security and confidentiality of your personal information and that of your children. However, no data transmission over the internet is completely secure, and we cannot guarantee the security of the information you provide to us.</p>
+        <p>We take reasonable steps to protect the security and confidentiality of personal information submitted through this form. However, no internet transmission or storage method can be guaranteed to be completely secure.</p>
 
         <h3>6. Children's Privacy</h3>
-        <p>Our website is not intended for children under the age of 18. We do not knowingly collect personal information from children. If you provide your children's information for the purpose of including them on health insurance plans, we will handle this information in accordance with this Privacy Policy and applicable laws.</p>
+        <p>This form is intended for use by adults. An adult may enter limited rating information for a dependent, but should not submit a child's direct contact information or other sensitive personal information through this form.</p>
 
         <h3>7. Changes to this Privacy Policy</h3>
         <p>We may update this Privacy Policy from time to time. Any changes will be posted on our website, and the date of the most recent update will be indicated at the top of the page.</p>
 
         <h3>8. Contact Us</h3>
-        <p>If you have any questions, concerns, or requests related to this Privacy Policy or the way we handle your personal information, including that of your children, please contact us at: [email address pending]</p>
+        <p>If you have questions or a privacy request, contact us at 561-709-3617.</p>
 
         <h3>9. Consent</h3>
-        <p>By using our website, you consent to the collection and use of your personal information, including that of your children, as described in this Privacy Policy.</p>
-
-        <p>This Privacy Policy is effective as of the last update date indicated at the top of the page. Please review this Privacy Policy regularly for any updates or changes.</p>
+        <p>Information you submit through this form will be handled as described in this Privacy Policy. Contact permission is governed by the separate consent checkbox shown before submission.</p>
       `
     },
     terms: {
@@ -1898,8 +1957,11 @@
       html: `
         <p>By using our services, you agree to the following terms:</p>
 
-        <h3>Representation</h3>
-        <p>You grant the authorized agent, as mentioned in the attestation disclaimer, the authority to act on your behalf concerning health insurance matters, including enrollment, renewals, and related decisions.</p>
+        <h3>Estimate Only</h3>
+        <p>The amount displayed is an estimate based on the information entered and the rate schedule programmed into this form. It is not a guarantee of eligibility, coverage, final premium, benefits, or policy issuance.</p>
+
+        <h3>No Enrollment or Authorization</h3>
+        <p>Submitting this form requests information or enrollment help. It does not enroll you in coverage and does not authorize an agent to make enrollment, renewal, or coverage decisions on your behalf. Any additional authorization must be provided separately.</p>
 
         <h3>Accuracy</h3>
         <p>You confirm that all information provided is true and accurate. False or misleading information can lead to the termination of services.</p>
@@ -1908,17 +1970,17 @@
         <p>Your consent remains in effect until you revoke it. You may revoke or modify your consent at any time.</p>
 
         <h3>Limitation of Liability</h3>
-        <p>The authorized agent and associated entities are not liable for any errors or omissions in the services provided or for any damages, including indirect or consequential damages.</p>
+        <p>To the extent permitted by law, the agents and associated service providers are not responsible for losses caused by inaccurate information entered into the form, temporary service interruptions, or reliance on an estimate as though it were a final coverage offer.</p>
       `
     },
     tcpa: {
       title: 'TCPA Disclaimer',
       html: `
-        <p>By providing your phone number, you expressly consent to receive auto-dialed and/or pre-recorded telemarketing calls, text messages, and/or emails from the authorized agent mentioned in the attestation disclaimer at the phone number and email address you provided, including for marketing purposes.</p>
+        <p>By checking the contact-consent box and submitting this form, you agree that <strong>${buildAgentClause()}</strong> may contact you at the phone number and/or email address you provide by call, text message, or email regarding your health insurance quote request.</p>
 
-        <p>You understand that consent is not a condition of purchase.</p>
+        <p>Consent is not a condition of purchase or use of the on-page estimate.</p>
 
-        <p>Standard message and data rates may apply. Message frequency varies.</p>
+        <p>Message and data rates may apply. Message frequency varies. Reply STOP to any text message to opt out of texts.</p>
       `
     }
   };
