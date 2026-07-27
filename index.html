@@ -3,6 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Restricts this page to only the external resources it actually needs:
+     Google Fonts for type, api.ipify.org for the IP lookup, and the
+     Cloudflare Worker for submissions. If you ever change the Worker's
+     URL, or add another external service, its domain needs to be added
+     here too or the browser will silently block it. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://api.ipify.org https://square-wave-17bd.blakemoree265.workers.dev; img-src 'self' data:; script-src 'self' 'unsafe-inline';">
 <title>Health Coverage Estimate</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -46,11 +52,6 @@
       linear-gradient(155deg, #fff5eb 0%, #f3f0ff 46%, #e8ebff 100%);
   }
 
-  /* ---------- Opening sequence ---------- */
-  /* 1) Card slides in from the left (~0.8s), header text still hidden.
-     2) Eyebrow + icon rise, title pops in word by word, subtitle rises.
-     3) Everything below the letterhead drops out from under it. */
-
   @keyframes cardSlideIn {
     from { opacity: 0; transform: translateX(-60vw) scale(0.985); }
     to   { opacity: 1; transform: translateX(0) scale(1); }
@@ -61,13 +62,11 @@
     to   { opacity: 1; transform: translateY(0);    filter: blur(0); }
   }
 
-  /* Same rise, but the letterhead waves settle at 0.46 opacity, not 1. */
   @keyframes iconRise {
     from { opacity: 0;    transform: translateY(14px); filter: blur(3px); }
     to   { opacity: 0.46; transform: translateY(0);    filter: blur(0); }
   }
 
-  /* Words snap into place with a quick overshoot */
   @keyframes popIn {
     0%   { opacity: 0; transform: scale(0.55); }
     70%  { opacity: 1; transform: scale(1.12); }
@@ -91,7 +90,6 @@
     animation: cardSlideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 
-  /* Wave divider + body + footer drop down together once the header has read. */
   .reveal.intro {
     overflow: hidden;
     max-height: 0;
@@ -99,7 +97,6 @@
     animation: dropReveal 1.4s ease 1.92s forwards;
   }
 
-  /* Set by JS on animationend so a growing people list is never clipped. */
   .reveal.intro.done {
     overflow: visible;
     max-height: none;
@@ -168,7 +165,6 @@
     letter-spacing: -0.015em;
   }
 
-  /* Title reveals one word at a time (per-word delay set inline on each .w) */
   .letterhead h1 .w {
     display: inline-block;
     opacity: 0;
@@ -203,6 +199,15 @@
   }
 
   .field { margin-bottom: 23px; }
+
+  .hp-field {
+    position: absolute;
+    left: -9999px;
+    top: auto;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+  }
 
   .field label {
     display: block;
@@ -599,8 +604,6 @@
   .status-msg.success { color: var(--good); }
   .status-msg.error { color: var(--err); }
 
-
-  /* ---------- Post-submission follow-up message ---------- */
   .success-followup {
     position: fixed;
     inset: 0;
@@ -714,7 +717,6 @@
   .footer a:hover { text-decoration: underline; }
   .footer .legal-line { margin: 0; line-height: 1.6; }
 
-  /* ---------- Legal documents (Privacy / Terms / TCPA) ---------- */
   .legal-overlay {
     position: fixed;
     inset: 0;
@@ -823,14 +825,7 @@
   @media (max-width: 620px) {
     body { padding: 18px 12px; }
     .sheet { border-radius: 20px; }
-    .sheet::before {
-    content: '';
-    display: block;
-    height: 7px;
-    background: linear-gradient(90deg, #ff4f63 0%, #ff8d45 34%, #ffd166 55%, #5b6cff 78%, #3046c5 100%);
-  }
-
-  .letterhead { padding: 33px 24px 31px; }
+    .letterhead { padding: 33px 24px 31px; }
     .letterhead-icon { right: 18px; width: 46px; height: 46px; }
     .letterhead h1 { max-width: 330px; }
     .body { padding: 28px 22px; }
@@ -849,8 +844,6 @@
     *, *::before, *::after {
       scroll-behavior: auto !important;
       animation-duration: 0.01ms !important;
-      /* The opening sequence is delay-driven; without this the page would sit
-         blank for 1.7s before the panel appeared. */
       animation-delay: 0s !important;
       animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
@@ -893,6 +886,14 @@
   <div class="body">
     <p class="step-label first"><span class="num">1</span>Get Your Estimate</p>
 
+    <!-- Honeypot: invisible to real visitors, but a plain form field to
+         bots that fill in every input they find. If this has a value on
+         submit, we quietly drop the request instead of sending it. -->
+    <div class="hp-field" aria-hidden="true">
+      <label for="hpWebsite">Leave this field blank</label>
+      <input type="text" id="hpWebsite" name="website" tabindex="-1" autocomplete="off">
+    </div>
+
     <div class="field">
       <label for="zipInput">Zip Code</label>
       <input type="text" id="zipInput" maxlength="10" placeholder="e.g. 34981" inputmode="numeric" oninput="compute()">
@@ -924,7 +925,7 @@
         <span class="label">This Person's Premium</span>
         <span class="amount empty" id="amountDisplay">Enter age &amp; sex</span>
       </div>
-      <p class="result-note" id="resultNote">Ages 0&ndash;64 quotable. Dependents under 18 are billed a flat rate; adult rates vary by age, sex, and smoker status. Outside this range, contact underwriting directly: 561-709-3617.</p>
+      <p class="result-note" id="resultNote">Ages 0&ndash;64 quotable. Dependents under 18 are billed a flat rate; adult rates vary by age, sex, and smoker status. Outside this range, contact underwriting directly.</p>
     </div>
 
     <button type="button" class="add-person-btn" id="addPersonBtn" onclick="addPerson()">+ Add This Person to Quote</button>
@@ -973,14 +974,7 @@
     <div class="field consent-field">
       <label class="family-check consent-label">
         <input type="checkbox" id="consentCheck">
-        <span>
-          By checking this box, I agree that <strong>[Blake Moree]</strong> (NPN 21495656) or <strong>[Anthony Benedict]</strong> (NPN 21498121) may contact me
-          at <span id="consentPhoneDisplay">the phone number provided above</span> by call, text, or email —
-          to discuss
-          this health insurance quote. Message and data rates may apply. Message frequency varies.
-          <strong>Consent is not required to receive a quote.</strong>
-          Reply STOP to any text to opt out at any time, or contact us directly to be removed from our contact list.
-        </span>
+        <span id="consentTextTarget"></span>
       </label>
       <p class="field-error" id="consentError">Please confirm consent to be contacted before submitting.</p>
     </div>
@@ -991,7 +985,6 @@
   </div>
 
   <div class="footer">
-   
     <p class="legal-line">By submitting this form, you agree to our <a href="#" onclick="openLegal('privacy'); return false;">Privacy Policy</a>, <a href="#" onclick="openLegal('terms'); return false;">Terms of Service</a>, and <a href="#" onclick="openLegal('tcpa'); return false;">TCPA Disclaimer</a>.</p>
   </div>
 
@@ -1013,9 +1006,44 @@
 </div>
 
 <script>
-  // ⚠️ Paste your Google Apps Script Web App URL here (see setup instructions)
-  const SHEET_ENDPOINT_URL = "https://script.google.com/macros/s/AKfycbwuh2UuceeIWeSYeewCaQ2sLs9R_SHCrNrAfvr0n1VUYMwZyvOFjRC1o0oyIGhdJgfWlg/exec";
+/* =========================================================================
+   CONFIG
+   Everything you're likely to need to change lives here. Nothing below
+   this block should need editing for routine updates (new agent, new
+   phone number, new sheet URL, new rate year, etc.).
+   ========================================================================= */
+  const CONFIG = {
+    // Google Apps Script Web App URL that receives submissions (see setup docs).
+    sheetEndpointUrl: "https://square-wave-17bd.blakemoree265.workers.dev/",
 
+    // Underwriting contact shown when someone falls outside the rate table's range.
+    underwritingPhone: "561-709-3617",
+
+    // Every agent listed here is automatically included in the consent
+    // checkbox text AND the disclosure string that gets logged to the
+    // sheet, so the two can never drift out of sync with each other.
+    agents: [
+      { name: "Blake Moree", npn: "21495656" },
+      { name: "Anthony Benedict", npn: "21498121" }
+    ],
+
+    underAgeRate: 41.44,   // flat monthly rate for anyone under 18
+    minAge: 0,
+    maxAge: 64,
+
+    // Sent with every submission and checked by the Apps Script. This is
+    // NOT real authentication (anyone who views page source can read it) —
+    // it just filters out generic bots/scanners that blindly POST to any
+    // Apps Script URL they find, without targeting this form specifically.
+    // Change this string, then update the matching check in your Apps
+    // Script, if you ever suspect it's being abused.
+    formToken: "monarch-quote-v1"
+  };
+
+/* =========================================================================
+   RATE TABLE
+   age -> { M: {n: non-smoker rate, s: smoker rate}, F: {...} }
+   ========================================================================= */
   const rates = {
     18: {M:{n:60.28,s:66.31}, F:{n:65.33,s:71.87}},
     19: {M:{n:60.28,s:66.31}, F:{n:65.33,s:71.87}},
@@ -1066,12 +1094,63 @@
     64: {M:{n:183.04,s:216.85}, F:{n:170.76,s:202.42}}
   };
 
+/* =========================================================================
+   STATE
+   ========================================================================= */
   let selectedGender = null;
   let selectedSmoker = null;
   let currentRate = null;
   let people = [];
   let clientIP = 'unknown';
 
+/* =========================================================================
+   CONSENT TEXT
+   Built once from CONFIG.agents, then used for BOTH the on-screen checkbox
+   copy and the disclosure string logged to the sheet — a single source of
+   truth so the two can never say different things.
+   ========================================================================= */
+  function buildAgentClause() {
+    // "Blake Moree (NPN 21495656) or Anthony Benedict (NPN 21498121)"
+    return CONFIG.agents
+      .map(function(a) { return a.name + ' (NPN ' + a.npn + ')'; })
+      .join(' or ');
+  }
+
+  function buildConsentHTML() {
+    return 'By checking this box, I agree that <strong>' + buildAgentClause() + '</strong> may contact me ' +
+      'at <span id="consentPhoneDisplay">the phone number provided above</span> by call, text, or email — ' +
+      'to discuss this health insurance quote. Message and data rates may apply. Message frequency varies. ' +
+      '<strong>Consent is not required to receive a quote.</strong> ' +
+      'Reply STOP to any text to opt out at any time, or contact us directly to be removed from our contact list.';
+  }
+
+  function buildConsentPlainText() {
+    return 'By checking this box, I agree that ' + buildAgentClause() + ' may contact me ' +
+      'at the phone number provided by call, text, or email — to discuss this health insurance quote. ' +
+      'Message and data rates may apply. Message frequency varies. Consent is not required to receive a quote. ' +
+      'Reply STOP to any text to opt out at any time, or contact us directly to be removed from our contact list.';
+  }
+
+  // Rendered into the page once, right before the draft is restored.
+  document.getElementById('consentTextTarget').innerHTML = buildConsentHTML();
+
+  // Same idea for the underwriting phone number shown by default —
+  // one value in CONFIG, used everywhere it appears.
+  document.getElementById('resultNote').textContent =
+    'Ages ' + CONFIG.minAge + '\u2013' + CONFIG.maxAge + ' quotable. Dependents under 18 are billed a flat rate; ' +
+    'adult rates vary by age, sex, and smoker status. Outside this range, contact underwriting directly: ' +
+    CONFIG.underwritingPhone + '.';
+
+  // Logged verbatim with every submission so there's a record of exactly
+  // what the person agreed to, independent of any later copy changes.
+  const CONSENT_DISCLOSURE_TEXT = buildConsentPlainText();
+
+/* =========================================================================
+   IP LOOKUP
+   Best-effort only — client-side code can't read a visitor's IP directly,
+   so this asks a free public lookup service. Falls back to 'unknown' if
+   it's blocked (ad blockers, offline, etc.) rather than failing the form.
+   ========================================================================= */
   function fetchClientIP() {
     fetch('https://api.ipify.org?format=json')
       .then(function(res) { return res.json(); })
@@ -1080,6 +1159,9 @@
   }
   fetchClientIP();
 
+/* =========================================================================
+   CORE QUOTE LOGIC
+   ========================================================================= */
   function setGender(g) {
     selectedGender = g;
     document.getElementById('btnM').classList.toggle('active', g === 'M');
@@ -1124,9 +1206,9 @@
     }
   }
 
-  const CONSENT_DISCLOSURE_TEXT = "By checking this box, I agree that [Blake Moree] (NPN 21495656) may contact me at the phone number provided by call, text, or email — to discuss this health insurance quote. Message and data rates may apply. Message frequency varies. Consent is not required to receive a quote. Reply STOP to any text to opt out at any time, or contact us directly to be removed from our contact list.";
-
-  const UNDER_18_RATE = 41.44;
+  function isAgeInRange(age) {
+    return !isNaN(age) && age >= CONFIG.minAge && age <= CONFIG.maxAge;
+  }
 
   function compute() {
     const ageInput = document.getElementById('ageInput').value;
@@ -1142,7 +1224,7 @@
       return;
     }
 
-    if (isNaN(age) || age < 0) {
+    if (isNaN(age) || age < CONFIG.minAge) {
       amountEl.textContent = 'Enter age, sex & smoker status';
       amountEl.classList.add('empty');
       currentRate = null;
@@ -1150,17 +1232,17 @@
       return;
     }
 
-    if (age > 64) {
+    if (age > CONFIG.maxAge) {
       amountEl.textContent = 'Out of range';
       amountEl.classList.add('empty');
       currentRate = null;
-      noteEl.textContent = 'This schedule only covers ages 0 through 64. Contact underwriting for other ages.';
+      noteEl.textContent = 'This schedule only covers ages ' + CONFIG.minAge + ' through ' + CONFIG.maxAge + '. Contact underwriting directly: ' + CONFIG.underwritingPhone + '.';
       return;
     }
 
     if (age < 18) {
-      currentRate = UNDER_18_RATE;
-      amountEl.textContent = '$' + UNDER_18_RATE.toFixed(2);
+      currentRate = CONFIG.underAgeRate;
+      amountEl.textContent = '$' + CONFIG.underAgeRate.toFixed(2);
       amountEl.classList.remove('empty');
       noteEl.textContent = 'Flat dependent rate for age ' + age + ' (under 18).';
       return;
@@ -1173,11 +1255,14 @@
     noteEl.textContent = 'Based on age ' + age + ', ' + (selectedGender === 'M' ? 'male' : 'female') + ', ' + (selectedSmoker ? 'smoker' : 'non-smoker') + '.';
   }
 
+/* =========================================================================
+   HOUSEHOLD (multi-person quote) LIST
+   ========================================================================= */
   function addPerson() {
     const msgEl = document.getElementById('addPersonMsg');
     const age = parseInt(document.getElementById('ageInput').value, 10);
 
-    if (!currentRate || !selectedGender || selectedSmoker === null || isNaN(age) || age < 0 || age > 64) {
+    if (!currentRate || !selectedGender || selectedSmoker === null || !isAgeInRange(age)) {
       msgEl.textContent = 'Complete a valid age, sex, and smoker status before adding.';
       return;
     }
@@ -1237,9 +1322,14 @@
     saveDraft();
   });
 
+/* =========================================================================
+   DRAFT PERSISTENCE (localStorage)
+   Lets someone close the tab mid-quote without losing their progress.
+   Cleared automatically after a successful submission.
+   ========================================================================= */
   const DRAFT_KEY = 'healthQuoterDraft';
 
-  function saveDraft() {
+  function saveDraftImmediate() {
     try {
       const draft = {
         zip: document.getElementById('zipInput').value,
@@ -1255,6 +1345,15 @@
       };
       localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
     } catch (e) { /* storage unavailable, skip silently */ }
+  }
+
+  // Every keystroke calls saveDraft() — debouncing collapses rapid-fire
+  // calls (typing a phone number, etc.) into a single disk write ~250ms
+  // after the person pauses, instead of writing on every character.
+  let saveDraftTimer = null;
+  function saveDraft() {
+    clearTimeout(saveDraftTimer);
+    saveDraftTimer = setTimeout(saveDraftImmediate, 250);
   }
 
   function loadDraft() {
@@ -1294,6 +1393,9 @@
     display.textContent = val ? val : 'the phone number provided above';
   });
 
+/* =========================================================================
+   VALIDATION HELPERS
+   ========================================================================= */
   function isValidEmail(value) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
   }
@@ -1303,6 +1405,9 @@
     return digits.length >= 10;
   }
 
+/* =========================================================================
+   CONFETTI (fires once, after a successful submission)
+   ========================================================================= */
   function launchConfetti() {
     const canvas = document.createElement('canvas');
     canvas.style.position = 'fixed';
@@ -1382,6 +1487,9 @@
     setTimeout(finishConfetti, duration + 450);
   }
 
+/* =========================================================================
+   POST-SUBMISSION FOLLOW-UP MESSAGE
+   ========================================================================= */
   let followupHideTimer = null;
   let followupCleanupTimer = null;
 
@@ -1442,6 +1550,9 @@
     }, 750);
   }
 
+/* =========================================================================
+   SUBMISSION
+   ========================================================================= */
   async function submitEntry() {
     const statusEl = document.getElementById('statusMsg');
     const btn = document.getElementById('submitBtn');
@@ -1450,6 +1561,17 @@
     const emailInput = document.getElementById('famEmail');
     const phoneError = document.getElementById('famPhoneError');
     const emailError = document.getElementById('famEmailError');
+
+    // Bots that auto-fill every field on a page will fill this one in;
+    // real visitors never see it. Pretend to succeed and stop silently —
+    // giving an error here would just teach the bot to leave it blank.
+    const honeypot = document.getElementById('hpWebsite');
+    if (honeypot && honeypot.value.trim() !== '') {
+      statusEl.textContent = 'Sent.';
+      statusEl.className = 'status-msg success';
+      resetForm();
+      return;
+    }
 
     // Clear previous inline errors and restore their normal messages.
     document.getElementById('consentError').classList.remove('show');
@@ -1460,14 +1582,7 @@
 
     // If there is a completed person still in the entry fields, add that person automatically.
     const pendingAge = parseInt(document.getElementById('ageInput').value, 10);
-    if (
-      currentRate &&
-      selectedGender &&
-      selectedSmoker !== null &&
-      !isNaN(pendingAge) &&
-      pendingAge >= 0 &&
-      pendingAge <= 64
-    ) {
+    if (currentRate && selectedGender && selectedSmoker !== null && isAgeInRange(pendingAge)) {
       addPerson();
     }
 
@@ -1522,7 +1637,7 @@
       return;
     }
 
-    if (SHEET_ENDPOINT_URL.includes('PASTE_YOUR')) {
+    if (CONFIG.sheetEndpointUrl.includes('PASTE_YOUR')) {
       statusEl.textContent = "This form isn't connected to a Google Sheet yet. See setup instructions.";
       statusEl.className = 'status-msg error';
       return;
@@ -1532,6 +1647,7 @@
     const familyIncluded = people.length > 1;
 
     const payload = {
+      formToken: CONFIG.formToken,
       timestamp: new Date().toISOString(),
       ipAddress: clientIP,
       zip: zip,
@@ -1558,24 +1674,107 @@
     statusEl.textContent = 'Saving...';
     statusEl.className = 'status-msg';
 
-    try {
-      await fetch(SHEET_ENDPOINT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify(payload)
-      });
+    const result = await sendPayloadWithRetry(payload);
+
+    if (result.success) {
       statusEl.textContent = 'Sent.';
       statusEl.className = 'status-msg success';
       resetForm();
       launchConfetti();
-    } catch (err) {
-      statusEl.textContent = 'Could not save. Check your connection and try again.';
+    } else if (result.reason === 'rejected') {
+      // Server actively rejected this (bad formToken, failed validation,
+      // rate limited) — retrying won't help, so don't queue it locally.
+      statusEl.textContent = result.message || 'This submission could not be processed.';
       statusEl.className = 'status-msg error';
-    } finally {
-      btn.disabled = false;
+    } else {
+      queuePendingSubmission(payload);
+      statusEl.textContent = "Couldn't reach the server, but your info is saved on this device and will send automatically once you're back online.";
+      statusEl.className = 'status-msg error';
     }
+
+    btn.disabled = false;
   }
+
+  // The Worker returns real CORS headers, so unlike the old Apps Script
+  // setup, this can actually read whether the submission succeeded and
+  // why it failed (network error vs. the server deliberately rejecting
+  // it, e.g. rate limiting or failed validation).
+  async function sendPayloadWithRetry(payload) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const res = await fetch(CONFIG.sheetEndpointUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+          return { success: true };
+        }
+
+        // Server responded but rejected the request — retrying the exact
+        // same payload won't change that outcome, so stop immediately.
+        let message = 'This submission could not be processed.';
+        try {
+          const errBody = await res.json();
+          if (res.status === 429) {
+            message = "You've submitted a few quotes recently — please wait a bit before trying again.";
+          } else if (errBody && errBody.error) {
+            message = 'Please check your information and try again.';
+          }
+        } catch (e) { /* non-JSON error body, use the default message */ }
+
+        return { success: false, reason: 'rejected', message: message };
+      } catch (err) {
+        // A real network failure (offline, DNS, connection refused) —
+        // worth one retry before giving up.
+        if (attempt === 0) await new Promise(function(r) { setTimeout(r, 1500); });
+      }
+    }
+    return { success: false, reason: 'network' };
+  }
+
+  const PENDING_KEY = 'healthQuoterPendingSubmissions';
+
+  function queuePendingSubmission(payload) {
+    try {
+      const raw = localStorage.getItem(PENDING_KEY);
+      const queue = raw ? JSON.parse(raw) : [];
+      queue.push(payload);
+      localStorage.setItem(PENDING_KEY, JSON.stringify(queue));
+    } catch (e) { /* storage unavailable; the submission is lost, nothing more we can do client-side */ }
+  }
+
+  // Runs once on page load. Any submission that failed to send on a
+  // previous visit gets one more silent attempt here, in the background,
+  // without interrupting whatever the person is doing on this visit.
+  async function flushPendingSubmissions() {
+    let queue;
+    try {
+      const raw = localStorage.getItem(PENDING_KEY);
+      if (!raw) return;
+      queue = JSON.parse(raw);
+      if (!Array.isArray(queue) || queue.length === 0) return;
+    } catch (e) { return; }
+
+    const stillPending = [];
+    for (const payload of queue) {
+      const result = await sendPayloadWithRetry(payload);
+      // Only keep retrying network failures. A payload the server actively
+      // rejected (bad token, failed validation) will never succeed on
+      // retry, so drop it rather than retrying forever.
+      if (!result.success && result.reason === 'network') stillPending.push(payload);
+    }
+
+    try {
+      if (stillPending.length > 0) {
+        localStorage.setItem(PENDING_KEY, JSON.stringify(stillPending));
+      } else {
+        localStorage.removeItem(PENDING_KEY);
+      }
+    } catch (e) { /* ignore */ }
+  }
+  flushPendingSubmissions();
 
   function resetForm() {
     document.getElementById('zipInput').value = '';
@@ -1604,12 +1803,16 @@
     document.getElementById('btnSmokerNo').classList.remove('active');
 
     compute();
+    clearTimeout(saveDraftTimer);
     try { localStorage.removeItem(DRAFT_KEY); } catch (e) { /* ignore */ }
   }
 
   loadDraft();
 
-  /* ---------- Opening sequence: unclamp the panel once it has dropped ---------- */
+/* =========================================================================
+   OPENING SEQUENCE: unclamp the panel once it has dropped, so a growing
+   people list is never clipped by the max-height used for the reveal.
+   ========================================================================= */
   (function () {
     const panel = document.getElementById('revealPanel');
     if (!panel) return;
@@ -1618,7 +1821,9 @@
     });
   })();
 
-  /* ---------- Legal documents ---------- */
+/* =========================================================================
+   LEGAL DOCUMENTS (Privacy / Terms / TCPA)
+   ========================================================================= */
   const LEGAL_DOCS = {
     privacy: {
       title: 'Privacy Policy',
