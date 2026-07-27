@@ -899,7 +899,7 @@
 
     <div class="field">
       <label for="zipInput">ZIP Code</label>
-      <input type="text" id="zipInput" maxlength="5" pattern="[0-9]{5}" placeholder="e.g. 34981" inputmode="numeric" autocomplete="postal-code" aria-describedby="zipError">
+      <input type="text" id="zipInput" maxlength="5" pattern="[0-9]{5}" placeholder="e.g. 34981" inputmode="numeric" autocomplete="off" aria-describedby="zipError">
       <p class="field-error" id="zipError">Enter a valid 5-digit ZIP code.</p>
     </div>
 
@@ -953,23 +953,23 @@
         <div class="family-panel-inner">
           <div class="field">
             <label for="famName">Full Name</label>
-            <input type="text" id="famName" placeholder="Your Name">
+            <input type="text" id="famName" placeholder="Your Name" autocomplete="off">
           </div>
           <div class="row-2">
             <div class="field">
               <label for="famPhone">Phone Number</label>
-              <input type="tel" id="famPhone" placeholder="(561) 000-0000">
+              <input type="tel" id="famPhone" placeholder="(561) 000-0000" autocomplete="off">
               <p class="field-error" id="famPhoneError">Enter a valid phone number.</p>
             </div>
             <div class="field">
               <label for="famEmail">Email</label>
-              <input type="email" id="famEmail" placeholder="name@email.com">
+              <input type="email" id="famEmail" placeholder="name@email.com" autocomplete="off">
               <p class="field-error" id="famEmailError">Enter a valid email address.</p>
             </div>
           </div>
           <div class="field">
             <label for="famTime">Best Time to Contact</label>
-            <input type="text" id="famTime" placeholder="e.g. Weekday mornings">
+            <input type="text" id="famTime" placeholder="e.g. Weekday mornings" autocomplete="off">
           </div>
         </div>
       </div>
@@ -1180,7 +1180,6 @@
     document.getElementById('btnM').setAttribute('aria-pressed', String(maleSelected));
     document.getElementById('btnF').setAttribute('aria-pressed', String(femaleSelected));
     compute();
-    saveDraft();
   }
 
   function setSmoker(isSmoker) {
@@ -1192,13 +1191,11 @@
     document.getElementById('btnSmokerYes').setAttribute('aria-pressed', String(smokerSelected));
     document.getElementById('btnSmokerNo').setAttribute('aria-pressed', String(nonSmokerSelected));
     compute();
-    saveDraft();
   }
 
   function toggleFamily() {
     const checked = document.getElementById('familyCheck').checked;
     document.getElementById('familyPanel').classList.toggle('open', checked);
-    saveDraft();
   }
 
   function openContactPanel(focusField) {
@@ -1207,7 +1204,6 @@
 
     familyCheck.checked = true;
     familyPanel.classList.add('open');
-    saveDraft();
 
     // Keep this compatible with embedded pages and older browsers.
     try {
@@ -1317,13 +1313,11 @@
     document.getElementById('btnSmokerNo').classList.remove('active');
     compute();
     document.getElementById('ageInput').focus();
-    saveDraft();
   }
 
   function removePerson(index) {
     people.splice(index, 1);
     renderPeople();
-    saveDraft();
   }
 
   function renderPeople() {
@@ -1352,84 +1346,20 @@
 
   document.getElementById('zipInput').addEventListener('input', function() {
     this.value = this.value.replace(/[^0-9]/g, '').slice(0, 5);
-    saveDraft();
   });
   document.getElementById('ageInput').addEventListener('input', function() {
     compute();
-    saveDraft();
   });
 
 /* =========================================================================
-   DRAFT PERSISTENCE (localStorage)
-   Lets someone close the tab mid-quote without losing their progress.
-   Cleared automatically after a successful submission.
+   LOCAL PRIVACY
+   Do not persist quote or contact information in the browser. Remove data
+   stored by older versions of this page so a refresh starts with a clean form.
    ========================================================================= */
-  const DRAFT_KEY = 'healthQuoterDraft';
-
-  function saveDraftImmediate() {
-    try {
-      const draft = {
-        zip: document.getElementById('zipInput').value,
-        age: document.getElementById('ageInput').value,
-        selectedGender: selectedGender,
-        selectedSmoker: selectedSmoker,
-        people: people,
-        familyIncluded: document.getElementById('familyCheck').checked,
-        famName: document.getElementById('famName').value,
-        famPhone: document.getElementById('famPhone').value,
-        famEmail: document.getElementById('famEmail').value,
-        famTime: document.getElementById('famTime').value
-      };
-      localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
-    } catch (e) { /* storage unavailable, skip silently */ }
-  }
-
-  // Every keystroke calls saveDraft() — debouncing collapses rapid-fire
-  // calls (typing a phone number, etc.) into a single disk write ~250ms
-  // after the person pauses, instead of writing on every character.
-  let saveDraftTimer = null;
-  function saveDraft() {
-    clearTimeout(saveDraftTimer);
-    saveDraftTimer = setTimeout(saveDraftImmediate, 250);
-  }
-
-  function loadDraft() {
-    let draft;
-    try {
-      const raw = localStorage.getItem(DRAFT_KEY);
-      if (!raw) return;
-      draft = JSON.parse(raw);
-    } catch (e) { return; }
-
-    if (draft.zip) document.getElementById('zipInput').value = draft.zip;
-    if (draft.age) document.getElementById('ageInput').value = draft.age;
-    if (draft.selectedGender) setGender(draft.selectedGender);
-    if (draft.selectedSmoker !== null && draft.selectedSmoker !== undefined) setSmoker(draft.selectedSmoker);
-    if (Array.isArray(draft.people)) {
-      people = draft.people.reduce(function(validPeople, person) {
-        const age = Number(person && person.age);
-        const sex = person && person.sex;
-        const smoker = person && person.smoker;
-        const rate = getRate(age, sex, smoker);
-        if (rate !== null) validPeople.push({ age: age, sex: sex, smoker: smoker, rate: rate });
-        return validPeople;
-      }, []);
-      renderPeople();
-    }
-    if (draft.famName) document.getElementById('famName').value = draft.famName;
-    if (draft.famPhone) document.getElementById('famPhone').value = draft.famPhone;
-    if (draft.famEmail) document.getElementById('famEmail').value = draft.famEmail;
-    if (draft.famTime) document.getElementById('famTime').value = draft.famTime;
-    if (draft.familyIncluded) {
-      document.getElementById('familyCheck').checked = true;
-      document.getElementById('familyPanel').classList.add('open');
-    }
-    compute();
-  }
-
-  ['famName', 'famPhone', 'famEmail', 'famTime'].forEach(function(id) {
-    document.getElementById(id).addEventListener('input', saveDraft);
-  });
+  try {
+    localStorage.removeItem('healthQuoterDraft');
+    localStorage.removeItem('healthQuoterPendingSubmissions');
+  } catch (e) { /* storage unavailable; nothing to clear */ }
 
 /* =========================================================================
    VALIDATION HELPERS
@@ -1701,7 +1631,6 @@
 
     const payload = {
       formToken: CONFIG.formToken,
-      submissionId: createSubmissionId(),
       timestamp: new Date().toISOString(),
       ipAddress: clientIP,
       zip: zip,
@@ -1741,19 +1670,11 @@
       statusEl.textContent = result.message || 'This submission could not be processed.';
       statusEl.className = 'status-msg error';
     } else {
-      queuePendingSubmission(payload);
-      statusEl.textContent = "Couldn't reach the server, but your info is saved on this device and will send automatically once you're back online.";
+      statusEl.textContent = "Couldn't reach the server. Nothing was submitted or saved; please try again.";
       statusEl.className = 'status-msg error';
     }
 
     btn.disabled = false;
-  }
-
-  function createSubmissionId() {
-    if (window.crypto && typeof window.crypto.randomUUID === 'function') {
-      return window.crypto.randomUUID();
-    }
-    return 'quote-' + Date.now() + '-' + Math.random().toString(16).slice(2);
   }
 
   // The Worker returns real CORS headers, so unlike the old Apps Script
@@ -1780,12 +1701,17 @@
           const errBody = await res.json();
           if (res.status === 429) {
             message = "You've submitted a few quotes recently — please wait a bit before trying again.";
-          } else if (errBody && errBody.error) {
-            message = 'Please check your information and try again.';
+          } else {
+            const serverMessage = errBody && (errBody.message || errBody.error);
+            if (typeof serverMessage === 'string' && serverMessage.trim()) {
+              message = serverMessage.trim();
+            } else if (res.status === 401 || res.status === 403) {
+              message = 'The quote form connection was rejected. Check that the form token matches the Cloudflare Worker.';
+            }
           }
         } catch (e) { /* non-JSON error body, use the default message */ }
 
-        return { success: false, reason: 'rejected', message: message };
+        return { success: false, reason: 'rejected', message: message, status: res.status };
       } catch (err) {
         // A real network failure (offline, DNS, connection refused) —
         // worth one retry before giving up.
@@ -1794,49 +1720,6 @@
     }
     return { success: false, reason: 'network' };
   }
-
-  const PENDING_KEY = 'healthQuoterPendingSubmissions';
-
-  function queuePendingSubmission(payload) {
-    try {
-      const raw = localStorage.getItem(PENDING_KEY);
-      const savedQueue = raw ? JSON.parse(raw) : [];
-      const queue = Array.isArray(savedQueue) ? savedQueue : [];
-      queue.push(payload);
-      localStorage.setItem(PENDING_KEY, JSON.stringify(queue));
-    } catch (e) { /* storage unavailable; the submission is lost, nothing more we can do client-side */ }
-  }
-
-  // Runs once on page load. Any submission that failed to send on a
-  // previous visit gets one more silent attempt here, in the background,
-  // without interrupting whatever the person is doing on this visit.
-  async function flushPendingSubmissions() {
-    let queue;
-    try {
-      const raw = localStorage.getItem(PENDING_KEY);
-      if (!raw) return;
-      queue = JSON.parse(raw);
-      if (!Array.isArray(queue) || queue.length === 0) return;
-    } catch (e) { return; }
-
-    const stillPending = [];
-    for (const payload of queue) {
-      const result = await sendPayloadWithRetry(payload);
-      // Only keep retrying network failures. A payload the server actively
-      // rejected (bad token, failed validation) will never succeed on
-      // retry, so drop it rather than retrying forever.
-      if (!result.success && result.reason === 'network') stillPending.push(payload);
-    }
-
-    try {
-      if (stillPending.length > 0) {
-        localStorage.setItem(PENDING_KEY, JSON.stringify(stillPending));
-      } else {
-        localStorage.removeItem(PENDING_KEY);
-      }
-    } catch (e) { /* ignore */ }
-  }
-  flushPendingSubmissions();
 
   function resetForm() {
     document.getElementById('zipInput').value = '';
@@ -1869,11 +1752,7 @@
     document.getElementById('btnSmokerNo').setAttribute('aria-pressed', 'false');
 
     compute();
-    clearTimeout(saveDraftTimer);
-    try { localStorage.removeItem(DRAFT_KEY); } catch (e) { /* ignore */ }
   }
-
-  loadDraft();
 
 /* =========================================================================
    OPENING SEQUENCE: unclamp the panel once it has dropped, so a growing
