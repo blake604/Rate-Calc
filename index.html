@@ -1723,7 +1723,9 @@
         try {
           const errBody = JSON.parse(rawBody);
           if (errBody && errBody.error) {
-            message = errBody.error + (errBody.detail ? ' — ' + errBody.detail : '');
+            message = errBody.error
+              + (errBody.detail ? ' — ' + errBody.detail : '')
+              + (errBody.requestedUrl ? ' [URL: ' + errBody.requestedUrl + ']' : '');
           }
         } catch (e) { /* body wasn't JSON — message already holds the raw text above */ }
 
