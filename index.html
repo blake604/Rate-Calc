@@ -1586,8 +1586,10 @@
       addPerson();
     }
 
-    if (!zip || people.length === 0) {
-      statusEl.textContent = "Please add a zip code and at least one person's age, sex, and smoker status.";
+    if (!/^\d{5}$/.test(zip) || people.length === 0) {
+      statusEl.textContent = zip && !/^\d{5}$/.test(zip)
+        ? 'Please enter a complete 5-digit zip code.'
+        : "Please add a zip code and at least one person's age, sex, and smoker status.";
       statusEl.className = 'status-msg error';
       return;
     }
@@ -1684,7 +1686,7 @@
     } else if (result.reason === 'rejected') {
       // Server actively rejected this (bad formToken, failed validation,
       // rate limited) — retrying won't help, so don't queue it locally.
-      statusEl.textContent = result.message || 'This submission could not be processed.';
+      statusEl.textContent = result.message;
       statusEl.className = 'status-msg error';
     } else {
       queuePendingSubmission(payload);
@@ -1714,15 +1716,16 @@
 
         // Server responded but rejected the request — retrying the exact
         // same payload won't change that outcome, so stop immediately.
-        let message = 'This submission could not be processed.';
+        // No generic fallback text: whatever the server actually said is
+        // what gets shown, verbatim, so the real cause is always visible.
+        const rawBody = await res.text();
+        let message = 'HTTP ' + res.status + ': ' + rawBody;
         try {
-          const errBody = await res.json();
-          if (res.status === 429) {
-            message = "You've submitted a few quotes recently — please wait a bit before trying again.";
-          } else if (errBody && errBody.error) {
-            message = 'Please check your information and try again.';
+          const errBody = JSON.parse(rawBody);
+          if (errBody && errBody.error) {
+            message = errBody.error + (errBody.detail ? ' — ' + errBody.detail : '');
           }
-        } catch (e) { /* non-JSON error body, use the default message */ }
+        } catch (e) { /* body wasn't JSON — message already holds the raw text above */ }
 
         return { success: false, reason: 'rejected', message: message };
       } catch (err) {
